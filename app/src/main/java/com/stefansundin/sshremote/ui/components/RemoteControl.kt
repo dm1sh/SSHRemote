@@ -86,7 +86,7 @@ import com.stefansundin.sshremote.ui.KeyEvent
 import com.stefansundin.sshremote.ui.screens.sampleHost
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 
-private val MinDimensionForActionButtons = 400.dp
+private val MinDimensionForActionButtons = 500.dp
 
 @Composable
 fun RemoteControl(
