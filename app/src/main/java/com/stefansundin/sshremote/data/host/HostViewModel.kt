@@ -23,6 +23,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.stefansundin.sshremote.HapticFeedback
+import com.stefansundin.sshremote.PendingVolumeRefreshTracker
 import com.stefansundin.sshremote.Result
 import com.stefansundin.sshremote.SshRepository
 import com.stefansundin.sshremote.data.CryptoManager
@@ -79,6 +80,7 @@ class HostViewModel(
     private val cryptoManager: CryptoManager,
     private val settingsRepository: SettingsRepository,
     private val passwordDao: PasswordDao,
+    private val pendingVolumeRefreshTracker: PendingVolumeRefreshTracker,
 ) : ViewModel(), IEditHostViewModel, IRemoteControlHostViewModel {
 
     private val _uiState = MutableStateFlow(RemoteUiState())
@@ -134,6 +136,26 @@ class HostViewModel(
                         }
                     }
                 }
+        }
+
+        viewModelScope.launch {
+            pendingVolumeRefreshTracker.state.collectLatest { pendingRefreshState ->
+                val hostId = _uiState.value.hostId
+                if (
+                    !pendingRefreshState.isAppActive ||
+                    !pendingRefreshState.hasPendingRefresh ||
+                    hostId == null ||
+                    pendingRefreshState.pendingHostId != hostId ||
+                    _uiState.value.connectionStatus != ConnectionStatus.CONNECTED ||
+                    activeHost.value?.smartVolume?.readCurrentVolume != true
+                ) {
+                    return@collectLatest
+                }
+
+                updateVolume()
+                updateMuted()
+                pendingVolumeRefreshTracker.markRefreshHandled(hostId, pendingRefreshState.pendingRefreshCounter)
+            }
         }
     }
 
@@ -496,6 +518,7 @@ class HostViewModel(
     }
 
     fun disconnect() {
+        _uiState.value.hostId?.let { pendingVolumeRefreshTracker.clearPending(it) }
         connectionJob?.cancel()
         mouseMoveJob?.cancel()
         mousePanJob?.cancel()
@@ -555,6 +578,7 @@ class HostViewModelFactory(
     private val cryptoManager: CryptoManager,
     private val settingsRepository: SettingsRepository,
     private val passwordDao: PasswordDao,
+    private val pendingVolumeRefreshTracker: PendingVolumeRefreshTracker,
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HostViewModel::class.java)) {
@@ -567,6 +591,7 @@ class HostViewModelFactory(
                 cryptoManager,
                 settingsRepository,
                 passwordDao,
+                pendingVolumeRefreshTracker,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

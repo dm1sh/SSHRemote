@@ -69,6 +69,14 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
 
                         when (val result = app.sshRepository.executeCommand(command.command)) {
                             is Result.Success -> {
+                                when (remoteControlKey) {
+                                    RemoteControlKey.VOLUME_UP,
+                                    RemoteControlKey.VOLUME_DOWN,
+                                    RemoteControlKey.MUTE,
+                                        -> app.pendingVolumeRefreshTracker.markVolumeChanged(hostId)
+
+                                    else -> Unit
+                                }
                                 Log.d(
                                     "NotificationReceiver",
                                     "Executed notification command $remoteControlKey for host $hostId.",

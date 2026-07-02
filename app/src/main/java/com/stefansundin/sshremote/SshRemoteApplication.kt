@@ -47,6 +47,7 @@ class SshRemoteApplication : Application() {
     val settingsRepository by lazy { SettingsRepository(this) }
     val sshRepository by lazy { SshRepository(settingsRepository) }
     val activeConnectionTracker by lazy { ActiveConnectionTracker() }
+    val pendingVolumeRefreshTracker by lazy { PendingVolumeRefreshTracker() }
     val applicationScope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
     var isRestoredFromBackup: Boolean = false

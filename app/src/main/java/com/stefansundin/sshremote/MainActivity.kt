@@ -190,6 +190,7 @@ class MainActivity : ComponentActivity() {
             cryptoManager,
             app.settingsRepository,
             app.passwordDao,
+            app.pendingVolumeRefreshTracker,
         )
     }
 
@@ -916,6 +917,18 @@ class MainActivity : ComponentActivity() {
             }
             handleIntent(intent)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val app = (application as SshRemoteApplication)
+        app.pendingVolumeRefreshTracker.setAppActive(true)
+    }
+
+    override fun onPause() {
+        val app = (application as SshRemoteApplication)
+        app.pendingVolumeRefreshTracker.setAppActive(false)
+        super.onPause()
     }
 
     override fun onDestroy() {
