@@ -111,6 +111,12 @@
     <string name="command_deleted">Command deleted</string>
     <string name="repeat_command_while_pressed">Repeat command while button is pressed</string>
     <string name="long_press_command">Long press command</string>
+    <string name="tap_long_press_tab">Tap / long press</string>
+    <string name="press_release_tab">Press / release</string>
+    <string name="press_release_mode_description">Use these commands to run one action when the button is pressed down and another when it is released.</string>
+    <string name="press_command">Press command</string>
+    <string name="release_command">Release command</string>
+    <string name="command_is_not_a_tap_command">Command is not a tap command.</string>
     <string name="key_title_format">Key: %s</string>
     <string name="fullscreen">Fullscreen</string>
     <string name="exit_fullscreen">Exit fullscreen</string>

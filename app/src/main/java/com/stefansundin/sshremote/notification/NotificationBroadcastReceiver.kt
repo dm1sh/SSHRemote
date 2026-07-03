@@ -22,8 +22,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.widget.Toast
 import com.stefansundin.sshremote.EXTRA_HOST_ID
 import com.stefansundin.sshremote.EXTRA_REMOTE_CONTROL_KEY
+import com.stefansundin.sshremote.R
 import com.stefansundin.sshremote.Result
 import com.stefansundin.sshremote.SshRemoteApplication
 import com.stefansundin.sshremote.data.host.ConnectionStatus
@@ -62,12 +64,24 @@ class NotificationBroadcastReceiver : BroadcastReceiver() {
                     try {
                         val host = app.hostRepository.getOnce(hostId)
                         val command = host?.remoteCommands?.get(remoteControlKey)
-                        if (command == null) {
-                            Log.w("NotificationReceiver", "No command found for key $remoteControlKey on host $hostId.")
-                            return@launch
+                        when {
+                            command == null -> {
+                                Log.w("NotificationReceiver", "No command found for key $remoteControlKey on host $hostId.")
+                                Toast.makeText(context, R.string.shortcut_command_not_found, Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
+                            !command.canAddRemoteShortcut() -> {
+                                Log.w(
+                                    "NotificationReceiver",
+                                    "Command for key $remoteControlKey on host $hostId is not a tap command.",
+                                )
+                                Toast.makeText(context, R.string.command_is_not_a_tap_command, Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
                         }
 
-                        when (val result = app.sshRepository.executeCommand(command.command)) {
+                        when (val result = app.sshRepository.executeCommand(command.command!!)) {
                             is Result.Success -> {
                                 when (remoteControlKey) {
                                     RemoteControlKey.VOLUME_UP,

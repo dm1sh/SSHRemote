@@ -151,7 +151,7 @@ fun EditCommandsTab(
                             Icon(Icons.Rounded.DragHandle, contentDescription = stringResource(R.string.reorder))
                         }
                         Text(
-                            text = command.name ?: command.command,
+                            text = command.displayText(),
                             modifier = Modifier.weight(1f),
                         )
                         IconButton(

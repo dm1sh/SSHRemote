@@ -551,7 +551,7 @@ fun RemoteControlScreen(
         host.remoteCommands?.get(remoteControlKey)
             ?.let { commandTemplate ->
                 try {
-                    val commandRaw = commandTemplate.command
+                    val commandRaw = commandTemplate.command ?: return@let
                     val command = if (commandRaw.contains("%d")) {
                         val linuxKeyCode = getLinuxKeyCode(keyCode)
                         commandRaw.replace("%d", linuxKeyCode.toString())
@@ -756,6 +756,18 @@ fun RemoteControlScreen(
                                 onKeyEvent = { event: KeyEvent ->
                                     val key = event.key
                                     val command = host.remoteCommands?.get(key) ?: return@RemoteControl
+
+                                    fun runRemoteCommand(commandText: String?) {
+                                        val text = commandText ?: return
+                                        coroutineScope.launch {
+                                            hostViewModel.runCommand(
+                                                text,
+                                                command.showOutput,
+                                                command.renderOutputAsMarkdown,
+                                            )
+                                        }
+                                    }
+
                                     when (event) {
                                         is KeyEvent.Click -> {
                                             performHapticFeedback(context, uiState.hapticFeedback)
@@ -764,11 +776,17 @@ fun RemoteControlScreen(
 
                                         is KeyEvent.LongPress -> {
                                             performHapticFeedback(context, uiState.hapticFeedback)
-                                            command.longPressCommand?.let {
-                                                coroutineScope.launch {
-                                                    hostViewModel.runCommand(it, command.showOutput)
-                                                }
-                                            }
+                                            runRemoteCommand(command.longPressCommand)
+                                        }
+
+                                        is KeyEvent.Down -> {
+                                            performHapticFeedback(context, uiState.hapticFeedback)
+                                            hostViewModel.runRemoteControlPressCommand(key)
+                                        }
+
+                                        is KeyEvent.Up -> {
+                                            performHapticFeedback(context, uiState.hapticFeedback)
+                                            hostViewModel.runRemoteControlReleaseCommand(key)
                                         }
                                     }
                                 },
@@ -797,7 +815,9 @@ fun RemoteControlScreen(
                                         is MouseEvent.Move -> {
                                             host.remoteCommands?.get(RemoteControlKey.MOUSE_MOVE)
                                                 ?.let { commandTemplate ->
-                                                    onMouseMove(event.dx, event.dy, commandTemplate.command)
+                                                    commandTemplate.command?.let { command ->
+                                                        onMouseMove(event.dx, event.dy, command)
+                                                    }
                                                 }
                                         }
 

@@ -25,4 +25,6 @@ sealed class KeyEvent {
 
     data class Click(override val key: RemoteControlKey) : KeyEvent()
     data class LongPress(override val key: RemoteControlKey) : KeyEvent()
+    data class Down(override val key: RemoteControlKey) : KeyEvent()
+    data class Up(override val key: RemoteControlKey) : KeyEvent()
 }

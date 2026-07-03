@@ -64,6 +64,8 @@ fun RepeatingButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
+    onDown: (() -> Unit)? = null,
+    onUp: (() -> Unit)? = null,
     repeating: Boolean = false,
     enabled: Boolean = true,
     shape: Shape = ButtonDefaults.shape,
@@ -76,6 +78,8 @@ fun RepeatingButton(
 ) {
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongClick by rememberUpdatedState(onLongClick)
+    val currentOnDown by rememberUpdatedState(onDown)
+    val currentOnUp by rememberUpdatedState(onUp)
     val view = LocalView.current
     val scope = rememberCoroutineScope()
 
@@ -100,6 +104,25 @@ fun RepeatingButton(
                         }
                         val up = waitForUpOrCancellation()
                         heldButtonJob.cancel()
+                        val releaseOrCancel = when (up) {
+                            null -> PressInteraction.Cancel(downPress)
+                            else -> PressInteraction.Release(downPress)
+                        }
+                        scope.launch {
+                            interactionSource.emit(releaseOrCancel)
+                        }
+                    }
+                } else if (currentOnDown != null || currentOnUp != null) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val downPress = PressInteraction.Press(down.position)
+                        scope.launch {
+                            interactionSource.emit(downPress)
+                        }
+                        view.playSoundEffect(SoundEffectConstants.CLICK)
+                        currentOnDown?.invoke()
+                        val up = waitForUpOrCancellation()
+                        currentOnUp?.invoke()
                         val releaseOrCancel = when (up) {
                             null -> PressInteraction.Cancel(downPress)
                             else -> PressInteraction.Release(downPress)

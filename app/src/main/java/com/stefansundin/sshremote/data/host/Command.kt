@@ -26,18 +26,67 @@ import java.util.UUID
 @Keep
 @Parcelize
 data class Command(
-    val command: String,
+    val command: String?,
     val longPressCommand: String? = null,
     val name: String? = null,
     val showOutput: Boolean = false,
     val renderOutputAsMarkdown: Boolean = false,
     val repeat: Boolean = false,
+    val downCommand: String? = null,
+    val upCommand: String? = null,
     val id: String = UUID.randomUUID().toString(),
 ) : Parcelable {
+    fun hasTapCommand(): Boolean = !command.isNullOrBlank()
+
+    fun hasLongPressCommand(): Boolean = !longPressCommand.isNullOrBlank()
+
+    fun hasDownCommand(): Boolean = !downCommand.isNullOrBlank()
+
+    fun hasUpCommand(): Boolean = !upCommand.isNullOrBlank()
+
+    fun usesPressReleaseCommands(): Boolean = hasDownCommand() || hasUpCommand()
+
+    fun hasRemoteAction(): Boolean {
+        return if (usesPressReleaseCommands()) {
+            hasDownCommand() || hasUpCommand()
+        } else {
+            hasTapCommand()
+        }
+    }
+
+    fun canAddRemoteShortcut(): Boolean = hasTapCommand() && !usesPressReleaseCommands()
+
+    fun displayText(): String = name ?: command ?: downCommand ?: upCommand.orEmpty()
+
+    fun normalized(): Command {
+        val normalizedCommand = command?.takeIf { it.isNotBlank() }
+        val normalizedLongPressCommand = longPressCommand?.takeIf { it.isNotBlank() }
+        val normalizedDownCommand = downCommand?.takeIf { it.isNotBlank() }
+        val normalizedUpCommand = upCommand?.takeIf { it.isNotBlank() }
+
+        return if (!normalizedDownCommand.isNullOrEmpty() || !normalizedUpCommand.isNullOrEmpty()) {
+            copy(
+                command = null,
+                longPressCommand = null,
+                repeat = false,
+                downCommand = normalizedDownCommand,
+                upCommand = normalizedUpCommand,
+            )
+        } else {
+            copy(
+                command = normalizedCommand,
+                longPressCommand = normalizedLongPressCommand,
+                downCommand = null,
+                upCommand = null,
+            )
+        }
+    }
+
     fun formatCommand(text: String): String {
         // Escape single quotes in the text to avoid breaking the command.
         // This may not be foolproof for all shell injection cases, so you should still be careful about what you're feeding this app.
         val escapedText = text.replace("'", "'\\''")
-        return command.format(escapedText)
+        val commandTemplate = requireNotNull(command) { "Command template is missing." }
+        return commandTemplate.format(escapedText)
     }
 }

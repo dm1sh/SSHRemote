@@ -175,7 +175,7 @@ class RouterActivity : ComponentActivity() {
             }
 
             val commandTemplate = host.resolveShareCommandTemplate()
-            if (commandTemplate?.command.isNullOrEmpty()) {
+            if (commandTemplate?.hasTapCommand() != true) {
                 uiState = RouterUiState.MissingShareCommand
                 return@launch
             }
@@ -238,7 +238,7 @@ class RouterActivity : ComponentActivity() {
             executeShortcutCommand(
                 host = host,
                 commandTemplate = commandTemplate,
-                command = commandTemplate.command,
+                command = commandTemplate.command ?: return@launch,
                 loadingTitle = getString(R.string.executing_on, host.name),
             )
         }

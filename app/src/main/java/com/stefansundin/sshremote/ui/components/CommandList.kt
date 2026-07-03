@@ -91,9 +91,10 @@ fun CommandList(
                 Button(
                     onClick = {
                         view.playSoundEffect(SoundEffectConstants.CLICK)
+                        val commandText = command.command ?: return@Button
                         scope.launch {
                             hostViewModel.runCommand(
-                                command = command.command,
+                                command = commandText,
                                 showOutput = command.showOutput,
                                 renderOutputAsMarkdown = command.renderOutputAsMarkdown,
                             )
@@ -102,7 +103,7 @@ fun CommandList(
                     enabled = connectionStatus == ConnectionStatus.CONNECTED,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(command.name ?: command.command)
+                    Text(command.displayText())
                 }
             }
         }

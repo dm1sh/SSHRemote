@@ -353,17 +353,26 @@ class MainActivity : ComponentActivity() {
                                 pendingShortcut.value = null
                                 val command = host.commands.find { it.id == shortcut.commandId }
                                 if (command != null) {
-                                    scope.launch {
+                                    val commandText = command.command
+                                    if (!commandText.isNullOrBlank()) {
+                                        scope.launch {
+                                            Toast.makeText(
+                                                this@MainActivity,
+                                                R.string.executing_command,
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                            hostViewModel.runCommand(
+                                                command = commandText,
+                                                showOutput = command.showOutput,
+                                                renderOutputAsMarkdown = command.renderOutputAsMarkdown,
+                                            )
+                                        }
+                                    } else {
                                         Toast.makeText(
                                             this@MainActivity,
-                                            R.string.executing_command,
+                                            getString(R.string.shortcut_command_not_found),
                                             Toast.LENGTH_SHORT,
                                         ).show()
-                                        hostViewModel.runCommand(
-                                            command = command.command,
-                                            showOutput = command.showOutput,
-                                            renderOutputAsMarkdown = command.renderOutputAsMarkdown,
-                                        )
                                     }
                                 } else {
                                     Toast.makeText(
@@ -378,14 +387,26 @@ class MainActivity : ComponentActivity() {
                                 pendingShortcut.value = null
                                 try {
                                     val remoteKey = RemoteControlKey.valueOf(shortcut.remoteControlKey)
-                                    if (host.remoteCommands?.get(remoteKey) != null) {
-                                        hostViewModel.runRemoteControlCommandWithResult(remoteKey)
-                                    } else {
-                                        Toast.makeText(
-                                            this@MainActivity,
-                                            getString(R.string.shortcut_command_not_found),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
+                                    when (val remoteCommand = host.remoteCommands?.get(remoteKey)) {
+                                        null -> {
+                                            Toast.makeText(
+                                                this@MainActivity,
+                                                getString(R.string.shortcut_command_not_found),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                        }
+
+                                        else -> {
+                                            if (remoteCommand.canAddRemoteShortcut()) {
+                                                hostViewModel.runRemoteControlCommandWithResult(remoteKey)
+                                            } else {
+                                                Toast.makeText(
+                                                    this@MainActivity,
+                                                    getString(R.string.command_is_not_a_tap_command),
+                                                    Toast.LENGTH_SHORT,
+                                                ).show()
+                                            }
+                                        }
                                     }
                                 } catch (e: IllegalArgumentException) {
                                     Log.e(
@@ -538,7 +559,7 @@ class MainActivity : ComponentActivity() {
                         val host = hosts?.find { it.id == share.hostId } ?: return@LaunchedEffect
                         val commandTemplate = host.resolveShareCommandTemplate()
                         pendingShare.value = null
-                        if (commandTemplate?.command?.isNotEmpty() == true) {
+                        if (commandTemplate?.hasTapCommand() == true) {
                             val command = commandTemplate.formatCommand(share.text)
                             scope.launch {
                                 hostViewModel.runCommand(command, commandTemplate.showOutput)

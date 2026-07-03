@@ -78,26 +78,26 @@ fun MousePad(
 
     val isEnabled = editing || connectionStatus == ConnectionStatus.CONNECTED
     val mouseMoveConfigured = host == null ||
-            !host.remoteCommands?.get(RemoteControlKey.MOUSE_MOVE)?.command.isNullOrEmpty()
+            host.remoteCommands?.get(RemoteControlKey.MOUSE_MOVE)?.hasTapCommand() == true
     val leftClickConfigured =
-        host == null || !host.remoteCommands?.get(RemoteControlKey.MOUSE_LEFT_CLICK)?.command.isNullOrEmpty()
+        host == null || host.remoteCommands?.get(RemoteControlKey.MOUSE_LEFT_CLICK)?.hasTapCommand() == true
     val rightClickConfigured =
-        host == null || !host.remoteCommands?.get(RemoteControlKey.MOUSE_RIGHT_CLICK)?.command.isNullOrEmpty()
+        host == null || host.remoteCommands?.get(RemoteControlKey.MOUSE_RIGHT_CLICK)?.hasTapCommand() == true
     val leftDownUpConfigured = host == null || (host.remoteCommands != null &&
-            !host.remoteCommands[RemoteControlKey.MOUSE_LEFT_DOWN]?.command.isNullOrEmpty() &&
-            !host.remoteCommands[RemoteControlKey.MOUSE_LEFT_UP]?.command.isNullOrEmpty()
+            host.remoteCommands[RemoteControlKey.MOUSE_LEFT_DOWN]?.hasTapCommand() == true &&
+            host.remoteCommands[RemoteControlKey.MOUSE_LEFT_UP]?.hasTapCommand() == true
             )
     val rightDownUpConfigured = host == null || (host.remoteCommands != null &&
-            !host.remoteCommands[RemoteControlKey.MOUSE_RIGHT_DOWN]?.command.isNullOrEmpty() &&
-            !host.remoteCommands[RemoteControlKey.MOUSE_RIGHT_UP]?.command.isNullOrEmpty()
+            host.remoteCommands[RemoteControlKey.MOUSE_RIGHT_DOWN]?.hasTapCommand() == true &&
+            host.remoteCommands[RemoteControlKey.MOUSE_RIGHT_UP]?.hasTapCommand() == true
             )
     val scrollingConfigured =
         host == null ||
                 (host.remoteCommands != null &&
-                        (!host.remoteCommands[RemoteControlKey.MOUSE_PAN_UP]?.command.isNullOrEmpty() ||
-                                !host.remoteCommands[RemoteControlKey.MOUSE_PAN_RIGHT]?.command.isNullOrEmpty() ||
-                                !host.remoteCommands[RemoteControlKey.MOUSE_PAN_DOWN]?.command.isNullOrEmpty() ||
-                                !host.remoteCommands[RemoteControlKey.MOUSE_PAN_LEFT]?.command.isNullOrEmpty()))
+                        (host.remoteCommands[RemoteControlKey.MOUSE_PAN_UP]?.hasTapCommand() == true ||
+                                host.remoteCommands[RemoteControlKey.MOUSE_PAN_RIGHT]?.hasTapCommand() == true ||
+                                host.remoteCommands[RemoteControlKey.MOUSE_PAN_DOWN]?.hasTapCommand() == true ||
+                                host.remoteCommands[RemoteControlKey.MOUSE_PAN_LEFT]?.hasTapCommand() == true))
 
     BackHandler(enabled = mouseMoveConfigured && isGestureNavigation) {
         // Prevent back gesture while this component is active

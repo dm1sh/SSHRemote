@@ -108,16 +108,23 @@ fun EditRemoteControlScreen(
 
     // These values are not Bundle-saveable; keep them in composition memory to avoid parcel crashes.
     var editingCommand by remember(host.id) { mutableStateOf<Pair<RemoteControlKey, Command>?>(null) }
-    var editedRemoteCommands by remember(host.id) { mutableStateOf(host.remoteCommands ?: emptyMap()) }
+    var editedRemoteCommands by remember(host.id) {
+        mutableStateOf((host.remoteCommands ?: emptyMap()).mapValues { it.value.normalized() })
+    }
     var editedCommands by remember(host.id) { mutableStateOf(host.commands) }
     var editedShareInBackground by remember(host.id) { mutableStateOf(host.shareInBackground) }
     var editedSmartVolumeSettings by remember(host.id) { mutableStateOf(host.smartVolume) }
     var editingCommandInList by remember(host.id) { mutableStateOf<Command?>(null) }
     var pendingCommandShortcutId by rememberSaveable(host.id) { mutableStateOf<String?>(null) }
 
+    fun normalizedRemoteCommands(commands: Map<RemoteControlKey, Command>): Map<RemoteControlKey, Command> {
+        return commands.mapValues { it.value.normalized() }
+    }
+
     val hasUnsavedChanges =
-        editedRemoteCommands != (host.remoteCommands
-            ?: emptyMap<RemoteControlKey, Command>()) || editedCommands != host.commands ||
+        editedRemoteCommands != normalizedRemoteCommands(
+            host.remoteCommands ?: emptyMap<RemoteControlKey, Command>(),
+        ) || editedCommands != host.commands ||
                 editedShareInBackground != host.shareInBackground || editedSmartVolumeSettings != host.smartVolume
     var showUnsavedBackDialog by rememberSaveable(host.id) { mutableStateOf(false) }
     var showMenu by rememberSaveable(host.id) { mutableStateOf(false) }
@@ -144,7 +151,7 @@ fun EditRemoteControlScreen(
                     onClick = {
                         view.playSoundEffect(SoundEffectConstants.CLICK)
                         onSave(
-                            editedRemoteCommands,
+                            normalizedRemoteCommands(editedRemoteCommands),
                             editedCommands,
                             editedShareInBackground,
                             editedSmartVolumeSettings,
@@ -179,8 +186,10 @@ fun EditRemoteControlScreen(
                     onClick = {
                         view.playSoundEffect(SoundEffectConstants.CLICK)
                         editedRemoteCommands =
-                            presets[resetToPresetKey]
-                                ?: throw IllegalStateException("Preset '$resetToPresetKey' not found")
+                            normalizedRemoteCommands(
+                                presets[resetToPresetKey]
+                                    ?: throw IllegalStateException("Preset '$resetToPresetKey' not found"),
+                            )
                         showResetDialog = false
                     },
                 ) {
@@ -334,7 +343,7 @@ fun EditRemoteControlScreen(
                     onClick = {
                         view.playSoundEffect(SoundEffectConstants.CLICK)
                         onSave(
-                            editedRemoteCommands,
+                            normalizedRemoteCommands(editedRemoteCommands),
                             editedCommands,
                             editedShareInBackground,
                             editedSmartVolumeSettings,
@@ -466,7 +475,7 @@ fun EditRemoteControlScreen(
     }
 
     pendingCommandShortcutId?.let { commandId ->
-        val commandLabel = editedCommands.find { it.id == commandId }?.let { it.name ?: it.command }
+        val commandLabel = editedCommands.find { it.id == commandId }?.displayText()
             ?: stringResource(R.string.command)
 
         AddCommandShortcutDialog(
@@ -496,7 +505,7 @@ fun EditRemoteControlScreen(
             initialRemoteCommands = editedRemoteCommands,
             onDismiss = { showEditMouseCommandsDialog = false },
             onSave = {
-                editedRemoteCommands = it
+                editedRemoteCommands = normalizedRemoteCommands(it)
                 showEditMouseCommandsDialog = false
             },
         )
@@ -507,7 +516,7 @@ fun EditRemoteControlScreen(
             initialRemoteCommands = editedRemoteCommands,
             onDismiss = { showEditKeyboardCommandDialog = false },
             onSave = {
-                editedRemoteCommands = it
+                editedRemoteCommands = normalizedRemoteCommands(it)
                 showEditKeyboardCommandDialog = false
             },
         )
@@ -520,7 +529,7 @@ fun EditRemoteControlScreen(
                 initialShareInBackground = editedShareInBackground,
                 onDismiss = { showShareTargetSettingsDialog = false },
                 onSave = { remoteCommands, shareInBackground ->
-                    editedRemoteCommands = remoteCommands
+                    editedRemoteCommands = normalizedRemoteCommands(remoteCommands)
                     editedShareInBackground = shareInBackground
                     showShareTargetSettingsDialog = false
                 },

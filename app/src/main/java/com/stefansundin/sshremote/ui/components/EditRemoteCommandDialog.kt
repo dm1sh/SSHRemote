@@ -30,6 +30,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -52,6 +53,11 @@ import com.stefansundin.sshremote.ui.dpadFocusable
 import com.stefansundin.sshremote.ui.portraitImePadding
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 
+private enum class RemoteCommandMode {
+    TAP,
+    PRESS_RELEASE,
+}
+
 @Composable
 fun EditRemoteCommandDialog(
     command: Pair<RemoteControlKey, Command>,
@@ -60,16 +66,35 @@ fun EditRemoteCommandDialog(
     onAddToHomeScreen: (RemoteControlKey) -> Unit,
 ) {
     val (key, initialCommand) = command
-    var newCommand by rememberSaveable { mutableStateOf(initialCommand.command) }
+    var selectedModeName by rememberSaveable {
+        mutableStateOf(
+            if (initialCommand.usesPressReleaseCommands()) {
+                RemoteCommandMode.PRESS_RELEASE.name
+            } else {
+                RemoteCommandMode.TAP.name
+            },
+        )
+    }
+    val selectedMode = RemoteCommandMode.valueOf(selectedModeName)
+    var newCommand by rememberSaveable { mutableStateOf(initialCommand.command ?: "") }
     var newLongPressCommand by rememberSaveable { mutableStateOf(initialCommand.longPressCommand ?: "") }
     var repeatCommand by rememberSaveable { mutableStateOf(initialCommand.repeat) }
+    var newDownCommand by rememberSaveable { mutableStateOf(initialCommand.downCommand ?: "") }
+    var newUpCommand by rememberSaveable { mutableStateOf(initialCommand.upCommand ?: "") }
     val view = LocalView.current
+    val canSave = when (selectedMode) {
+        RemoteCommandMode.TAP -> newCommand.isNotBlank()
+        RemoteCommandMode.PRESS_RELEASE -> newDownCommand.isNotBlank() || newUpCommand.isNotBlank()
+    }
+    val canAddToHomeScreen = selectedMode == RemoteCommandMode.TAP && newCommand.isNotBlank()
 
     fun buildCommand() = initialCommand.copy(
-        command = newCommand,
-        longPressCommand = newLongPressCommand.ifBlank { null },
-        repeat = repeatCommand,
-    )
+        command = if (selectedMode == RemoteCommandMode.TAP) newCommand else null,
+        longPressCommand = if (selectedMode == RemoteCommandMode.TAP) newLongPressCommand.ifBlank { null } else null,
+        repeat = selectedMode == RemoteCommandMode.TAP && repeatCommand,
+        downCommand = if (selectedMode == RemoteCommandMode.PRESS_RELEASE) newDownCommand.ifBlank { null } else null,
+        upCommand = if (selectedMode == RemoteCommandMode.PRESS_RELEASE) newUpCommand.ifBlank { null } else null,
+    ).normalized()
 
     AlertDialog(
         title = { Text(stringResource(R.string.edit_command)) },
@@ -82,40 +107,85 @@ fun EditRemoteCommandDialog(
                     stringResource(R.string.key_title_format, stringResource(key.titleRes)),
                     style = MaterialTheme.typography.titleLarge,
                 )
+                ResponsiveTabRow(selectedTabIndex = selectedMode.ordinal) {
+                    RemoteCommandMode.entries.forEachIndexed { index, mode ->
+                        Tab(
+                            selected = selectedMode.ordinal == index,
+                            onClick = { selectedModeName = mode.name },
+                            text = {
+                                Text(
+                                    text = stringResource(
+                                        when (mode) {
+                                            RemoteCommandMode.TAP -> R.string.tap_long_press_tab
+                                            RemoteCommandMode.PRESS_RELEASE -> R.string.press_release_tab
+                                        },
+                                    ),
+                                    maxLines = 1,
+                                )
+                            },
+                        )
+                    }
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextField(
-                        value = newCommand,
-                        onValueChange = { newCommand = it },
-                        label = { Text(stringResource(R.string.command)) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .dpadFocusable(),
-                    )
-                    TextField(
-                        value = newLongPressCommand,
-                        onValueChange = { newLongPressCommand = it },
-                        label = { Text(stringResource(R.string.long_press_command)) },
-                        enabled = !repeatCommand,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .dpadFocusable(),
-                    )
-                    RowWithCheckbox(
-                        checked = repeatCommand,
-                        text = stringResource(R.string.repeat_command_while_pressed),
-                        onCheckedChange = { repeatCommand = it },
-                    )
-                    OutlinedButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            val updatedCommand = buildCommand()
-                            onSave(key, updatedCommand)
-                            onAddToHomeScreen(key)
-                            onDismiss()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.add_to_home_screen))
+                    if (selectedMode == RemoteCommandMode.TAP) {
+                        TextField(
+                            value = newCommand,
+                            onValueChange = { newCommand = it },
+                            label = { Text(stringResource(R.string.command)) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .dpadFocusable(),
+                        )
+                        TextField(
+                            value = newLongPressCommand,
+                            onValueChange = { newLongPressCommand = it },
+                            label = { Text(stringResource(R.string.long_press_command)) },
+                            enabled = !repeatCommand,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .dpadFocusable(),
+                        )
+                        RowWithCheckbox(
+                            checked = repeatCommand,
+                            text = stringResource(R.string.repeat_command_while_pressed),
+                            onCheckedChange = { repeatCommand = it },
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.press_release_mode_description),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        TextField(
+                            value = newDownCommand,
+                            onValueChange = { newDownCommand = it },
+                            label = { Text(stringResource(R.string.press_command)) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .dpadFocusable(),
+                        )
+                        TextField(
+                            value = newUpCommand,
+                            onValueChange = { newUpCommand = it },
+                            label = { Text(stringResource(R.string.release_command)) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .dpadFocusable(),
+                        )
+                    }
+                    if (selectedMode == RemoteCommandMode.TAP) {
+                        OutlinedButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                val updatedCommand = buildCommand()
+                                onSave(key, updatedCommand)
+                                    onAddToHomeScreen(key)
+                                onDismiss()
+                            },
+                            enabled = canAddToHomeScreen,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.add_to_home_screen))
+                        }
                     }
                 }
             }
@@ -129,6 +199,7 @@ fun EditRemoteCommandDialog(
                     onSave(key, buildCommand())
                     onDismiss()
                 },
+                enabled = canSave,
             ) {
                 Text(stringResource(R.string.save))
             }

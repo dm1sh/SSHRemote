@@ -88,12 +88,15 @@ data class Host(
                 )
             },
             remoteCommands = remoteCommands?.mapValues {
+                val command = it.value.normalized()
                 ExportedCommand(
-                    name = it.value.name,
-                    command = it.value.command,
-                    longPressCommand = it.value.longPressCommand,
-                    renderOutputAsMarkdown = it.value.renderOutputAsMarkdown,
-                    repeat = it.value.repeat,
+                    name = command.name,
+                    command = command.command,
+                    longPressCommand = command.longPressCommand,
+                    renderOutputAsMarkdown = command.renderOutputAsMarkdown,
+                    repeat = command.repeat,
+                    downCommand = command.downCommand,
+                    upCommand = command.upCommand,
                 )
             },
             startScreen = startScreen,

@@ -38,11 +38,13 @@ import java.util.zip.GZIPOutputStream
 data class ExportedCommand(
     val id: String? = null,
     val name: String?,
-    val command: String,
+    val command: String?,
     val longPressCommand: String? = null,
     val showOutput: Boolean? = null,
     val renderOutputAsMarkdown: Boolean? = null,
     val repeat: Boolean? = null,
+    val downCommand: String? = null,
+    val upCommand: String? = null,
 ) {
     fun toCommand(): Command {
         return Command(
@@ -53,7 +55,9 @@ data class ExportedCommand(
             showOutput = showOutput ?: false,
             renderOutputAsMarkdown = renderOutputAsMarkdown ?: false,
             repeat = repeat ?: false,
-        )
+            downCommand = downCommand,
+            upCommand = upCommand,
+        ).normalized()
     }
 }
 

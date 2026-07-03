@@ -60,6 +60,8 @@ interface IEditHostViewModel {
 interface IRemoteControlHostViewModel {
     fun connect(host: Host)
     fun runRemoteControlCommand(key: RemoteControlKey)
+    fun runRemoteControlPressCommand(key: RemoteControlKey) {}
+    fun runRemoteControlReleaseCommand(key: RemoteControlKey) {}
     fun clearCommandOutput()
     suspend fun runCommand(
         command: String,
@@ -369,36 +371,81 @@ class HostViewModel(
         runRemoteControlCommandWithResult(key)
     }
 
+    override fun runRemoteControlPressCommand(key: RemoteControlKey) {
+        val command = activeHost.value?.remoteCommands?.get(key) ?: return
+        if (!command.usesPressReleaseCommands()) {
+            return
+        }
+        val downCommand = command.downCommand?.takeIf { it.isNotBlank() } ?: return
+
+        viewModelScope.launch {
+            runCommand(
+                command = downCommand,
+                showOutput = command.showOutput,
+                renderOutputAsMarkdown = command.renderOutputAsMarkdown,
+            )
+        }
+    }
+
+    override fun runRemoteControlReleaseCommand(key: RemoteControlKey) {
+        val command = activeHost.value?.remoteCommands?.get(key) ?: return
+        if (!command.usesPressReleaseCommands()) {
+            return
+        }
+        val upCommand = command.upCommand?.takeIf { it.isNotBlank() }
+
+        viewModelScope.launch {
+            val result = if (upCommand != null) {
+                runCommand(
+                    command = upCommand,
+                    showOutput = command.showOutput,
+                    renderOutputAsMarkdown = command.renderOutputAsMarkdown,
+                )
+            } else {
+                Result.Success("")
+            }
+
+            if (result is Result.Success) {
+                runPostRemoteControlCommandActions(key)
+            }
+        }
+    }
+
+    private suspend fun runPostRemoteControlCommandActions(key: RemoteControlKey) {
+        when (key) {
+            RemoteControlKey.VOLUME_UP, RemoteControlKey.VOLUME_DOWN -> {
+                updateVolume()
+                if (uiState.value.muted == true) {
+                    updateMuted()
+                }
+            }
+
+            RemoteControlKey.MUTE -> {
+                updateMuted()
+            }
+
+            else -> Unit
+        }
+    }
+
     fun runRemoteControlCommandWithResult(key: RemoteControlKey, onComplete: ((Result) -> Unit)? = null) {
         val command = activeHost.value?.remoteCommands?.get(key)
-        if (command != null) {
+        val clickCommand = command?.command
+        if (command != null && !clickCommand.isNullOrBlank() && !command.usesPressReleaseCommands()) {
             viewModelScope.launch {
                 val result = runCommand(
-                    command = command.command,
+                    command = clickCommand,
                     showOutput = command.showOutput,
                     renderOutputAsMarkdown = command.renderOutputAsMarkdown,
                 )
                 if (result is Result.Success) {
-                    when (key) {
-                        RemoteControlKey.VOLUME_UP, RemoteControlKey.VOLUME_DOWN -> {
-                            updateVolume()
-                            if (uiState.value.muted == true) {
-                                updateMuted()
-                            }
-                        }
-
-                        RemoteControlKey.MUTE -> {
-                            updateMuted()
-                        }
-
-                        else -> Unit
-                    }
+                    runPostRemoteControlCommandActions(key)
                 }
                 onComplete?.invoke(result)
             }
         } else {
-            Log.e("HostViewModel", "No command found for key: $key")
-            onComplete?.invoke(Result.Error("No command found for key: $key"))
+            Log.e("HostViewModel", "No tap command found for key: $key")
+            onComplete?.invoke(Result.Error("No tap command found for key: $key"))
         }
     }
 
@@ -507,10 +554,11 @@ class HostViewModel(
                     }
 
                     activeHost.value?.remoteCommands?.get(key)?.let { command ->
+                        val commandText = command.command ?: return@let
                         val (result, duration) = measureTimedValue {
-                            sshRepository.executeCommandReuseShell(command.command)
+                            sshRepository.executeCommandReuseShell(commandText)
                         }
-                        Log.d("HostViewModel", "executeCommand for '${command.command}' took $duration")
+                        Log.d("HostViewModel", "executeCommand for '$commandText' took $duration")
                     }
                 }
             }

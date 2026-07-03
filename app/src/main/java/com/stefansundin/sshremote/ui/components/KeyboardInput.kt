@@ -57,8 +57,8 @@ fun KeyboardInput(
 ) {
     val keyboardConfigured = host == null ||
             (host.remoteCommands != null &&
-                    (!host.remoteCommands[RemoteControlKey.KEYBOARD_KEY_INPUT]?.command.isNullOrEmpty() ||
-                            !host.remoteCommands[RemoteControlKey.KEYBOARD_TYPE_INPUT]?.command.isNullOrEmpty()))
+                    (host.remoteCommands[RemoteControlKey.KEYBOARD_KEY_INPUT]?.hasTapCommand() == true ||
+                            host.remoteCommands[RemoteControlKey.KEYBOARD_TYPE_INPUT]?.hasTapCommand() == true))
     val isEnabled = connectionStatus == ConnectionStatus.CONNECTED && keyboardConfigured
     val zeroWidthSpace = "\u200B"
     var text by rememberSaveable(stateSaver = TextFieldValue.Saver) {

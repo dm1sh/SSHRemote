@@ -437,7 +437,7 @@ private fun Dpad(
         }
 
         // CENTER
-        if (host == null || host.remoteCommands == null || host.remoteCommands[RemoteControlKey.SELECT]?.command?.isEmpty() == false) {
+        if (host == null || host.remoteCommands == null || host.remoteCommands[RemoteControlKey.SELECT]?.hasRemoteAction() == true) {
             RemoteButton(
                 RemoteControlKey.SELECT,
                 onKeyEvent,
@@ -475,15 +475,22 @@ private fun RemoteButton(
     content: @Composable RowScope.() -> Unit,
 ) {
     val command = host?.remoteCommands?.get(key)
+    val usesPressReleaseCommands = command?.usesPressReleaseCommands() == true
 
     RepeatingButton(
         onClick = { onKeyEvent(KeyEvent.Click(key)) },
+        onDown = if (usesPressReleaseCommands) {
+            { onKeyEvent(KeyEvent.Down(key)) }
+        } else null,
+        onUp = if (usesPressReleaseCommands) {
+            { onKeyEvent(KeyEvent.Up(key)) }
+        } else null,
         modifier = modifier,
         repeating = command?.repeat == true,
-        onLongClick = if (command?.longPressCommand.isNullOrEmpty()) null else {
+        onLongClick = if (command?.hasLongPressCommand() == true) {
             { onKeyEvent(KeyEvent.LongPress(key)) }
-        },
-        enabled = editing || (isConnected && command?.command?.isNotEmpty() == true),
+        } else null,
+        enabled = editing || (isConnected && command?.hasRemoteAction() == true),
         shape = shape,
         contentPadding = contentPadding,
         colors = colors,

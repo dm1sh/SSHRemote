@@ -78,7 +78,7 @@ fun SpecialKeysRow(
     connectionStatus: ConnectionStatus? = null,
 ) {
     val keyboardConfigured = host == null ||
-            (host.remoteCommands != null && !host.remoteCommands[RemoteControlKey.KEYBOARD_KEY_INPUT]?.command.isNullOrEmpty())
+            (host.remoteCommands != null && host.remoteCommands[RemoteControlKey.KEYBOARD_KEY_INPUT]?.hasTapCommand() == true)
     val isEnabled = connectionStatus == ConnectionStatus.CONNECTED && keyboardConfigured
 
     val modifiers = setOf(
