@@ -45,6 +45,7 @@ data class ExportedCommand(
     val repeat: Boolean? = null,
     val downCommand: String? = null,
     val upCommand: String? = null,
+    val physicalKeyCodes: List<Int>? = null,
 ) {
     fun toCommand(): Command {
         return Command(
@@ -57,6 +58,7 @@ data class ExportedCommand(
             repeat = repeat ?: false,
             downCommand = downCommand,
             upCommand = upCommand,
+            physicalKeyCodes = physicalKeyCodes,
         ).normalized()
     }
 }

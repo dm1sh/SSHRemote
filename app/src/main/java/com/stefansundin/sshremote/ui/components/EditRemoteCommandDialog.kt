@@ -27,6 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -61,6 +62,7 @@ private enum class RemoteCommandMode {
 @Composable
 fun EditRemoteCommandDialog(
     command: Pair<RemoteControlKey, Command>,
+    existingRemoteCommands: Map<RemoteControlKey, Command>,
     onDismiss: () -> Unit,
     onSave: (RemoteControlKey, Command) -> Unit,
     onAddToHomeScreen: (RemoteControlKey) -> Unit,
@@ -81,6 +83,8 @@ fun EditRemoteCommandDialog(
     var repeatCommand by rememberSaveable { mutableStateOf(initialCommand.repeat) }
     var newDownCommand by rememberSaveable { mutableStateOf(initialCommand.downCommand ?: "") }
     var newUpCommand by rememberSaveable { mutableStateOf(initialCommand.upCommand ?: "") }
+    var physicalKeyCodes by rememberSaveable { mutableStateOf(initialCommand.physicalKeyCodes.orEmpty()) }
+    var showPhysicalKeyBindingsDialog by rememberSaveable { mutableStateOf(false) }
     val view = LocalView.current
     val canSave = when (selectedMode) {
         RemoteCommandMode.TAP -> newCommand.isNotBlank()
@@ -94,6 +98,7 @@ fun EditRemoteCommandDialog(
         repeat = selectedMode == RemoteCommandMode.TAP && repeatCommand,
         downCommand = if (selectedMode == RemoteCommandMode.PRESS_RELEASE) newDownCommand.ifBlank { null } else null,
         upCommand = if (selectedMode == RemoteCommandMode.PRESS_RELEASE) newUpCommand.ifBlank { null } else null,
+        physicalKeyCodes = physicalKeyCodes,
     ).normalized()
 
     AlertDialog(
@@ -172,13 +177,30 @@ fun EditRemoteCommandDialog(
                                 .dpadFocusable(),
                         )
                     }
+                    OutlinedButton(
+                        onClick = {
+                            view.playSoundEffect(SoundEffectConstants.CLICK)
+                            showPhysicalKeyBindingsDialog = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = if (physicalKeyCodes.isNotEmpty()) {
+                            ButtonDefaults.outlinedButtonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                        } else {
+                            ButtonDefaults.outlinedButtonColors()
+                        },
+                    ) {
+                        Text(stringResource(R.string.configure_physical_keys))
+                    }
                     if (selectedMode == RemoteCommandMode.TAP) {
                         OutlinedButton(
                             onClick = {
                                 view.playSoundEffect(SoundEffectConstants.CLICK)
                                 val updatedCommand = buildCommand()
                                 onSave(key, updatedCommand)
-                                    onAddToHomeScreen(key)
+                                onAddToHomeScreen(key)
                                 onDismiss()
                             },
                             enabled = canAddToHomeScreen,
@@ -216,6 +238,19 @@ fun EditRemoteCommandDialog(
         },
         modifier = Modifier.portraitImePadding(),
     )
+
+    if (showPhysicalKeyBindingsDialog) {
+        PhysicalKeyBindingsDialog(
+            remoteControlKey = key,
+            initialKeyCodes = physicalKeyCodes,
+            existingRemoteCommands = existingRemoteCommands,
+            onDismiss = { showPhysicalKeyBindingsDialog = false },
+            onSave = {
+                physicalKeyCodes = it
+                showPhysicalKeyBindingsDialog = false
+            },
+        )
+    }
 }
 
 @Preview(showBackground = true, widthDp = 400, heightDp = 600)
@@ -234,6 +269,7 @@ private fun EditRemoteCommandDialogPreview() {
         Surface {
             EditRemoteCommandDialog(
                 command = Pair(key, wtypePreset[key]!!),
+                existingRemoteCommands = wtypePreset,
                 onDismiss = {},
                 onSave = { _, _ -> },
                 onAddToHomeScreen = {},

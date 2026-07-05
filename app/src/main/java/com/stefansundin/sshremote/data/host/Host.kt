@@ -97,6 +97,7 @@ data class Host(
                     repeat = command.repeat,
                     downCommand = command.downCommand,
                     upCommand = command.upCommand,
+                    physicalKeyCodes = command.physicalKeyCodes,
                 )
             },
             startScreen = startScreen,

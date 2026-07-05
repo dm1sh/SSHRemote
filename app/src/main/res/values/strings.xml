@@ -116,6 +116,14 @@
     <string name="press_release_mode_description">Use these commands to run one action when the button is pressed down and another when it is released.</string>
     <string name="press_command">Press command</string>
     <string name="release_command">Release command</string>
+    <string name="configure_physical_keys">Configure physical keys</string>
+    <string name="physical_key_bindings_description">These bindings are only active on the Remote tab.</string>
+    <string name="bind_physical_key">Bind physical key</string>
+    <string name="press_physical_key_now">Press a physical key now…</string>
+    <string name="tap_bound_key_to_remove">Tap a bound key to remove it.</string>
+    <string name="rebind_physical_key_title">Rebind physical key?</string>
+    <string name="rebind_physical_key_message">This key is already bound to %1$s. Rebind it to %2$s instead?</string>
+    <string name="rebind">Rebind</string>
     <string name="command_is_not_a_tap_command">Command is not a tap command.</string>
     <string name="key_title_format">Key: %s</string>
     <string name="fullscreen">Fullscreen</string>

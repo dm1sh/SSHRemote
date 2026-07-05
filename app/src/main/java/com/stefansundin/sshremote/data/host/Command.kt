@@ -34,6 +34,7 @@ data class Command(
     val repeat: Boolean = false,
     val downCommand: String? = null,
     val upCommand: String? = null,
+    val physicalKeyCodes: List<Int>? = null,
     val id: String = UUID.randomUUID().toString(),
 ) : Parcelable {
     fun hasTapCommand(): Boolean = !command.isNullOrBlank()
@@ -43,6 +44,8 @@ data class Command(
     fun hasDownCommand(): Boolean = !downCommand.isNullOrBlank()
 
     fun hasUpCommand(): Boolean = !upCommand.isNullOrBlank()
+
+    fun isBoundToPhysicalKey(keyCode: Int): Boolean = physicalKeyCodes?.contains(keyCode) == true
 
     fun usesPressReleaseCommands(): Boolean = hasDownCommand() || hasUpCommand()
 
@@ -63,6 +66,13 @@ data class Command(
         val normalizedLongPressCommand = longPressCommand?.takeIf { it.isNotBlank() }
         val normalizedDownCommand = downCommand?.takeIf { it.isNotBlank() }
         val normalizedUpCommand = upCommand?.takeIf { it.isNotBlank() }
+        val normalizedPhysicalKeyCodes = physicalKeyCodes
+            ?.asSequence()
+            ?.filter { it > 0 }
+            ?.distinct()
+            ?.sorted()
+            ?.toList()
+            ?.takeIf { it.isNotEmpty() }
 
         return if (!normalizedDownCommand.isNullOrEmpty() || !normalizedUpCommand.isNullOrEmpty()) {
             copy(
@@ -71,6 +81,7 @@ data class Command(
                 repeat = false,
                 downCommand = normalizedDownCommand,
                 upCommand = normalizedUpCommand,
+                physicalKeyCodes = normalizedPhysicalKeyCodes,
             )
         } else {
             copy(
@@ -78,6 +89,7 @@ data class Command(
                 longPressCommand = normalizedLongPressCommand,
                 downCommand = null,
                 upCommand = null,
+                physicalKeyCodes = normalizedPhysicalKeyCodes,
             )
         }
     }

@@ -21,6 +21,7 @@ package com.stefansundin.sshremote.ui.screens
 import android.app.Activity
 import android.content.res.Configuration
 import android.os.Build
+import android.view.ViewConfiguration
 import android.view.SoundEffectConstants
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
@@ -114,6 +115,7 @@ import com.stefansundin.sshremote.data.host.HostConnectionDetails
 import com.stefansundin.sshremote.data.host.IRemoteControlHostViewModel
 import com.stefansundin.sshremote.data.host.RemoteControlKey
 import com.stefansundin.sshremote.data.host.RemoteUiState
+import com.stefansundin.sshremote.data.host.buildPhysicalKeyBindingMap
 import com.stefansundin.sshremote.data.identity.IRemoteControlIdentityViewModel
 import com.stefansundin.sshremote.data.identity.Identity
 import com.stefansundin.sshremote.data.settings.ISettingsViewModel
@@ -135,7 +137,11 @@ import com.stefansundin.sshremote.ui.dpadFocusable
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 import android.view.KeyEvent as AndroidKeyEvent
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -538,12 +544,155 @@ fun RemoteControlScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val imeInsets = WindowInsets.ime
     var pressedSpecialKeys by rememberSaveable { mutableStateOf(emptySet<Int>()) }
+    val physicalKeyBindings = remember(host.remoteCommands) { buildPhysicalKeyBindingMap(host.remoteCommands) }
+    val longPressTimeoutMillis = remember { ViewConfiguration.getLongPressTimeout().toLong() }
+    val activePhysicalKeyStates = remember { mutableMapOf<Int, PhysicalKeyPressState>() }
+    val activePressReleaseCounts = remember { mutableMapOf<RemoteControlKey, Int>() }
 
     val hideKeyboard = {
         focusManager.clearFocus(force = true)
         keyboardController?.hide()
         activity?.window?.let { window ->
             WindowCompat.getInsetsController(window, view).hide(WindowInsetsCompat.Type.ime())
+        }
+    }
+
+    fun handleRemoteControlEvent(event: KeyEvent) {
+        val key = event.key
+        val command = host.remoteCommands?.get(key) ?: return
+
+        fun runRemoteCommand(commandText: String?) {
+            val text = commandText ?: return
+            coroutineScope.launch {
+                hostViewModel.runCommand(
+                    text,
+                    command.showOutput,
+                    command.renderOutputAsMarkdown,
+                )
+            }
+        }
+
+        when (event) {
+            is KeyEvent.Click -> {
+                performHapticFeedback(context, uiState.hapticFeedback)
+                hostViewModel.runRemoteControlCommand(key)
+            }
+
+            is KeyEvent.LongPress -> {
+                performHapticFeedback(context, uiState.hapticFeedback)
+                runRemoteCommand(command.longPressCommand)
+            }
+
+            is KeyEvent.Down -> {
+                performHapticFeedback(context, uiState.hapticFeedback)
+                hostViewModel.runRemoteControlPressCommand(key)
+            }
+
+            is KeyEvent.Up -> {
+                performHapticFeedback(context, uiState.hapticFeedback)
+                hostViewModel.runRemoteControlReleaseCommand(key)
+            }
+        }
+    }
+
+    fun clearActivePhysicalKeys(sendReleaseEvents: Boolean) {
+        activePhysicalKeyStates.values.forEach { state ->
+            state.longPressJob?.cancel()
+            state.repeatJob?.cancel()
+        }
+
+        if (sendReleaseEvents) {
+            activePressReleaseCounts.keys.forEach { remoteKey ->
+                handleRemoteControlEvent(KeyEvent.Up(remoteKey))
+            }
+        }
+
+        activePhysicalKeyStates.clear()
+        activePressReleaseCounts.clear()
+    }
+
+    fun handlePhysicalKeyEvent(nativeKeyEvent: AndroidKeyEvent): Boolean {
+        if (pagerState.currentPage != 0) {
+            return false
+        }
+
+        val keyCode = nativeKeyEvent.keyCode
+        val remoteKey = physicalKeyBindings[keyCode] ?: return false
+        val command = host.remoteCommands?.get(remoteKey) ?: return false
+
+        if (!command.hasRemoteAction()) {
+            return false
+        }
+
+        return when (nativeKeyEvent.action) {
+            AndroidKeyEvent.ACTION_DOWN -> {
+                if (nativeKeyEvent.repeatCount > 0 || activePhysicalKeyStates.containsKey(keyCode)) {
+                    true
+                } else {
+                    val state = PhysicalKeyPressState(
+                        remoteKey = remoteKey,
+                        usesPressReleaseCommands = command.usesPressReleaseCommands(),
+                    )
+                    activePhysicalKeyStates[keyCode] = state
+
+                    when {
+                        state.usesPressReleaseCommands -> {
+                            val currentCount = activePressReleaseCounts[remoteKey] ?: 0
+                            activePressReleaseCounts[remoteKey] = currentCount + 1
+                            if (currentCount == 0) {
+                                handleRemoteControlEvent(KeyEvent.Down(remoteKey))
+                            }
+                        }
+
+                        command.repeat -> {
+                            handleRemoteControlEvent(KeyEvent.Click(remoteKey))
+                            state.repeatJob = coroutineScope.launch {
+                                delay(500.milliseconds)
+                                while (isActive && activePhysicalKeyStates.containsKey(keyCode)) {
+                                    handleRemoteControlEvent(KeyEvent.Click(remoteKey))
+                                    delay(100.milliseconds)
+                                }
+                            }
+                        }
+
+                        command.hasLongPressCommand() -> {
+                            state.longPressJob = coroutineScope.launch {
+                                delay(longPressTimeoutMillis.milliseconds)
+                                if (activePhysicalKeyStates[keyCode] === state) {
+                                    state.longPressTriggered = true
+                                    handleRemoteControlEvent(KeyEvent.LongPress(remoteKey))
+                                }
+                            }
+                        }
+                    }
+
+                    true
+                }
+            }
+
+            AndroidKeyEvent.ACTION_UP -> {
+                val state = activePhysicalKeyStates.remove(keyCode)
+                state?.longPressJob?.cancel()
+                state?.repeatJob?.cancel()
+
+                if (state != null) {
+                    if (state.usesPressReleaseCommands) {
+                        val currentCount = activePressReleaseCounts[state.remoteKey] ?: 0
+                        if (currentCount <= 1) {
+                            activePressReleaseCounts.remove(state.remoteKey)
+                            handleRemoteControlEvent(KeyEvent.Up(state.remoteKey))
+                        } else {
+                            activePressReleaseCounts[state.remoteKey] = currentCount - 1
+                        }
+                    } else if (state.repeatJob == null && !state.longPressTriggered) {
+                        handleRemoteControlEvent(KeyEvent.Click(state.remoteKey))
+                    }
+                }
+
+                true
+            }
+
+            else -> true
         }
     }
 
@@ -574,6 +723,9 @@ fun RemoteControlScreen(
     }
 
     LaunchedEffect(pagerState.currentPage) {
+        if (pagerState.currentPage != 0) {
+            clearActivePhysicalKeys(sendReleaseEvents = uiState.connectionStatus == ConnectionStatus.CONNECTED)
+        }
         if (pagerState.currentPage != 2) {
             // Release any pressed special keys when leaving the keyboard tab
             pressedSpecialKeys.forEach { key ->
@@ -597,26 +749,39 @@ fun RemoteControlScreen(
             }
     }
 
+    LaunchedEffect(uiState.connectionStatus) {
+        if (uiState.connectionStatus != ConnectionStatus.CONNECTED) {
+            clearActivePhysicalKeys(sendReleaseEvents = false)
+        }
+    }
+
+    DisposableEffect(host.id) {
+        onDispose {
+            clearActivePhysicalKeys(sendReleaseEvents = false)
+        }
+    }
+
     BoxWithConstraints(
         modifier = modifier.onPreviewKeyEvent {
+            val nativeKeyEvent = it.nativeKeyEvent
             if (host.smartVolume?.controlVolumeWithHardwareButtons == true) {
-                when (it.nativeKeyEvent.keyCode) {
+                when (nativeKeyEvent.keyCode) {
                     AndroidKeyEvent.KEYCODE_VOLUME_DOWN -> {
-                        if (it.nativeKeyEvent.action == AndroidKeyEvent.ACTION_DOWN) {
+                        if (nativeKeyEvent.action == AndroidKeyEvent.ACTION_DOWN) {
                             hostViewModel.runRemoteControlCommand(RemoteControlKey.VOLUME_DOWN)
                         }
                         return@onPreviewKeyEvent true
                     }
 
                     AndroidKeyEvent.KEYCODE_VOLUME_UP -> {
-                        if (it.nativeKeyEvent.action == AndroidKeyEvent.ACTION_DOWN) {
+                        if (nativeKeyEvent.action == AndroidKeyEvent.ACTION_DOWN) {
                             hostViewModel.runRemoteControlCommand(RemoteControlKey.VOLUME_UP)
                         }
                         return@onPreviewKeyEvent true
                     }
                 }
             }
-            false
+            handlePhysicalKeyEvent(nativeKeyEvent)
         },
     ) {
         val showTopBar = maxHeight > 400.dp
@@ -753,43 +918,7 @@ fun RemoteControlScreen(
                     when (page) {
                         0 -> {
                             RemoteControl(
-                                onKeyEvent = { event: KeyEvent ->
-                                    val key = event.key
-                                    val command = host.remoteCommands?.get(key) ?: return@RemoteControl
-
-                                    fun runRemoteCommand(commandText: String?) {
-                                        val text = commandText ?: return
-                                        coroutineScope.launch {
-                                            hostViewModel.runCommand(
-                                                text,
-                                                command.showOutput,
-                                                command.renderOutputAsMarkdown,
-                                            )
-                                        }
-                                    }
-
-                                    when (event) {
-                                        is KeyEvent.Click -> {
-                                            performHapticFeedback(context, uiState.hapticFeedback)
-                                            hostViewModel.runRemoteControlCommand(key)
-                                        }
-
-                                        is KeyEvent.LongPress -> {
-                                            performHapticFeedback(context, uiState.hapticFeedback)
-                                            runRemoteCommand(command.longPressCommand)
-                                        }
-
-                                        is KeyEvent.Down -> {
-                                            performHapticFeedback(context, uiState.hapticFeedback)
-                                            hostViewModel.runRemoteControlPressCommand(key)
-                                        }
-
-                                        is KeyEvent.Up -> {
-                                            performHapticFeedback(context, uiState.hapticFeedback)
-                                            hostViewModel.runRemoteControlReleaseCommand(key)
-                                        }
-                                    }
-                                },
+                                onKeyEvent = { event: KeyEvent -> handleRemoteControlEvent(event) },
                                 host = host,
                                 connectionStatus = uiState.connectionStatus,
                                 volume = uiState.volume,
@@ -1048,6 +1177,14 @@ private fun RemoteControlScreenPreview_CommandsTab() {
         RemoteControlScreenPreview(initialPage = 3)
     }
 }
+
+private data class PhysicalKeyPressState(
+    val remoteKey: RemoteControlKey,
+    val usesPressReleaseCommands: Boolean,
+    var longPressTriggered: Boolean = false,
+    var longPressJob: Job? = null,
+    var repeatJob: Job? = null,
+)
 
 private fun getLinuxKeyCode(keyCode: Int): Int {
     return when (keyCode) {

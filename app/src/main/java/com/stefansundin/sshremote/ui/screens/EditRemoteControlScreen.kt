@@ -72,6 +72,7 @@ import com.stefansundin.sshremote.data.host.RemoteControlKey
 import com.stefansundin.sshremote.data.host.RemoteControlScreen
 import com.stefansundin.sshremote.data.host.SmartVolumeSettings
 import com.stefansundin.sshremote.data.host.presets
+import com.stefansundin.sshremote.data.host.upsertRemoteCommandWithExclusivePhysicalKeys
 import com.stefansundin.sshremote.ui.KeyEvent
 import com.stefansundin.sshremote.ui.components.AddCommandShortcutDialog
 import com.stefansundin.sshremote.ui.components.EditCommandDialog
@@ -568,11 +569,12 @@ fun EditRemoteControlScreen(
     editingCommand?.let { command ->
         EditRemoteCommandDialog(
             command = command,
+            existingRemoteCommands = editedRemoteCommands,
             onDismiss = { editingCommand = null },
             onSave = { key, newCommand ->
-                editedRemoteCommands = editedRemoteCommands.toMutableMap().apply {
-                    this[key] = newCommand
-                }
+                editedRemoteCommands = normalizedRemoteCommands(
+                    upsertRemoteCommandWithExclusivePhysicalKeys(editedRemoteCommands, key, newCommand),
+                )
             },
             onAddToHomeScreen = { key ->
                 onAddRemoteCommandShortcut(
