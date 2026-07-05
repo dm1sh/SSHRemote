@@ -92,6 +92,7 @@ import com.stefansundin.sshremote.data.knownhost.IKnownHostViewModel
 import com.stefansundin.sshremote.data.knownhost.KnownHost
 import com.stefansundin.sshremote.ui.components.NoWrapOnSpecialCharactersVisualTransformation
 import com.stefansundin.sshremote.ui.components.PublicKeyDialog
+import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.components.TextWithInlineIcon
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.delay
@@ -288,22 +289,28 @@ fun KnownHostListScreen(
                     )
                 }
             } else {
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(bottom = 80.dp),
-                ) {
-                    items(knownHosts, key = { it.line }) { entry ->
-                        KnownHostItem(
-                            entry = entry,
-                            onViewHostKey = {
-                                hostKeyToShow = entry.line
-                                showHostKeyDialog = true
-                            },
-                            onDelete = {
-                                knownHostViewModel.deleteKnownHost(entry)
-                                undoableDeletedKnownHostLine = entry.line
-                            },
-                        )
+                ScrollbarContainer(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalLazyListState = listState,
+                ) { contentModifier ->
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(bottom = 80.dp),
+                        modifier = contentModifier,
+                    ) {
+                        items(knownHosts, key = { it.line }) { entry ->
+                            KnownHostItem(
+                                entry = entry,
+                                onViewHostKey = {
+                                    hostKeyToShow = entry.line
+                                    showHostKeyDialog = true
+                                },
+                                onDelete = {
+                                    knownHostViewModel.deleteKnownHost(entry)
+                                    undoableDeletedKnownHostLine = entry.line
+                                },
+                            )
+                        }
                     }
                 }
             }

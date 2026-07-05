@@ -109,6 +109,7 @@ import com.stefansundin.sshremote.data.identity.Identity
 import com.stefansundin.sshremote.data.identity.IdentityEvent
 import com.stefansundin.sshremote.ui.components.NoWrapOnSpecialCharactersVisualTransformation
 import com.stefansundin.sshremote.ui.components.PublicKeyDialog
+import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.components.TextWithInlineIcon
 import com.stefansundin.sshremote.ui.dpadFocusable
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
@@ -369,24 +370,30 @@ fun IdentityListScreen(
                     )
                 }
             } else {
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(bottom = 80.dp),
-                ) {
-                    items(identitiesList, key = { it.id }) { identity ->
-                        IdentityItem(
-                            identity = identity,
-                            cryptoManager = cryptoManager,
-                            onShowPublicKey = { identityViewModel.showPublicKeyFor(identity) },
-                            onExportPublicKey = { identityViewModel.exportPublicKeyFor(identity) },
-                            onDelete = {
-                                onDelete(identity)
-                                undoableDeletedIdentityId = identity.id
-                            },
-                            onRename = { newName -> onRename(identity, newName) },
-                            onAttachCertificate = { cert -> onAttachCertificate(identity, cert) },
-                            onDeleteCertificate = { onDeleteCertificate(identity) },
-                        )
+                ScrollbarContainer(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalLazyListState = listState,
+                ) { contentModifier ->
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(bottom = 80.dp),
+                        modifier = contentModifier,
+                    ) {
+                        items(identitiesList, key = { it.id }) { identity ->
+                            IdentityItem(
+                                identity = identity,
+                                cryptoManager = cryptoManager,
+                                onShowPublicKey = { identityViewModel.showPublicKeyFor(identity) },
+                                onExportPublicKey = { identityViewModel.exportPublicKeyFor(identity) },
+                                onDelete = {
+                                    onDelete(identity)
+                                    undoableDeletedIdentityId = identity.id
+                                },
+                                onRename = { newName -> onRename(identity, newName) },
+                                onAttachCertificate = { cert -> onAttachCertificate(identity, cert) },
+                                onDeleteCertificate = { onDeleteCertificate(identity) },
+                            )
+                        }
                     }
                 }
             }

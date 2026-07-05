@@ -29,10 +29,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -90,6 +92,7 @@ import com.stefansundin.sshremote.data.settings.SettingsEvent
 import com.stefansundin.sshremote.ui.components.ColorSettingDialog
 import com.stefansundin.sshremote.ui.components.HapticFeedbackSettingDialog
 import com.stefansundin.sshremote.ui.components.QrCodeDialog
+import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.components.ThemeSettingDialog
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -362,6 +365,7 @@ fun SettingsScreen(
     var previewPrimaryColor by rememberSaveable(stateSaver = ColorSaver) { mutableStateOf(primaryColor) }
     val onPrimaryColor by settingsViewModel.onPrimaryColor.collectAsState()
     var previewOnPrimaryColor by rememberSaveable(stateSaver = ColorSaver) { mutableStateOf(onPrimaryColor) }
+    val verticalScrollState = rememberScrollState()
 
     var showThemeDialog by rememberSaveable { mutableStateOf(false) }
     var showColorDialog by rememberSaveable { mutableStateOf(false) }
@@ -630,214 +634,224 @@ fun SettingsScreen(
                 )
             },
         ) { innerPadding ->
-            Column(
+            Box(
                 modifier = Modifier
                     .padding(innerPadding)
-                    .verticalScroll(rememberScrollState()),
+                    .fillMaxSize(),
             ) {
-                SettingsGroup(stringResource(R.string.appearance)) {
-                    SettingsItem(
-                        title = stringResource(R.string.theme),
-                        subtitle = stringResource(savedTheme.labelRes),
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            previewTheme = savedTheme
-                            showThemeDialog = true
-                        },
-                    )
-                    SettingsItem(
-                        title = stringResource(R.string.colors),
-                        subtitle = stringResource(R.string.customize_colors),
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            previewUseDynamicColors = useDynamicColors
-                            previewBackgroundColor = backgroundColor
-                            previewPrimaryColor = primaryColor
-                            previewOnPrimaryColor = onPrimaryColor
-                            showColorDialog = true
-                        },
-                    )
-                }
+                ScrollbarContainer(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalScrollState = verticalScrollState,
+                ) { contentModifier ->
+                    Column(
+                        modifier = contentModifier
+                            .verticalScroll(verticalScrollState),
+                    ) {
+                        SettingsGroup(stringResource(R.string.appearance)) {
+                            SettingsItem(
+                                title = stringResource(R.string.theme),
+                                subtitle = stringResource(savedTheme.labelRes),
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    previewTheme = savedTheme
+                                    showThemeDialog = true
+                                },
+                            )
+                            SettingsItem(
+                                title = stringResource(R.string.colors),
+                                subtitle = stringResource(R.string.customize_colors),
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    previewUseDynamicColors = useDynamicColors
+                                    previewBackgroundColor = backgroundColor
+                                    previewPrimaryColor = primaryColor
+                                    previewOnPrimaryColor = onPrimaryColor
+                                    showColorDialog = true
+                                },
+                            )
+                        }
 
-                HorizontalDivider()
+                        HorizontalDivider()
 
-                SettingsGroup(stringResource(R.string.remote_control_group)) {
-                    SettingsItem(
-                        title = stringResource(R.string.haptic_feedback),
-                        subtitle = stringResource(savedHapticFeedback.labelRes, savedHapticFeedback.duration),
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            previewHapticFeedback = savedHapticFeedback
-                            showHapticFeedbackDialog = true
-                        },
-                    )
-                    SettingsSwitchItem(
-                        title = stringResource(R.string.keep_screen_on),
-                        checked = keepScreenOn,
-                        onCheckedChange = { settingsViewModel.setKeepScreenOn(it) },
-                    )
-                    SettingsSwitchItem(
-                        title = stringResource(R.string.show_when_locked),
-                        checked = showWhenLocked,
-                        onCheckedChange = { settingsViewModel.setShowWhenLocked(it) },
-                    )
-                    SettingsSwitchItem(
-                        title = stringResource(R.string.show_notification),
-                        checked = notificationsEnabled,
-                        onCheckedChange = {
-                            if (it) {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                } else {
-                                    settingsViewModel.setNotificationsEnabled(true)
-                                }
-                            } else {
-                                settingsViewModel.setNotificationsEnabled(false)
+                        SettingsGroup(stringResource(R.string.remote_control_group)) {
+                            SettingsItem(
+                                title = stringResource(R.string.haptic_feedback),
+                                subtitle = stringResource(savedHapticFeedback.labelRes, savedHapticFeedback.duration),
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    previewHapticFeedback = savedHapticFeedback
+                                    showHapticFeedbackDialog = true
+                                },
+                            )
+                            SettingsSwitchItem(
+                                title = stringResource(R.string.keep_screen_on),
+                                checked = keepScreenOn,
+                                onCheckedChange = { settingsViewModel.setKeepScreenOn(it) },
+                            )
+                            SettingsSwitchItem(
+                                title = stringResource(R.string.show_when_locked),
+                                checked = showWhenLocked,
+                                onCheckedChange = { settingsViewModel.setShowWhenLocked(it) },
+                            )
+                            SettingsSwitchItem(
+                                title = stringResource(R.string.show_notification),
+                                checked = notificationsEnabled,
+                                onCheckedChange = {
+                                    if (it) {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        } else {
+                                            settingsViewModel.setNotificationsEnabled(true)
+                                        }
+                                    } else {
+                                        settingsViewModel.setNotificationsEnabled(false)
+                                    }
+                                },
+                            )
+                        }
+
+                        HorizontalDivider()
+
+                        SettingsGroup(stringResource(R.string.security)) {
+                            SettingsItem(
+                                title = stringResource(R.string.ssh_keys),
+                                subtitle = stringResource(R.string.ssh_keys_subtitle),
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = onNavigateToIdentityList,
+                            )
+                            SettingsItem(
+                                title = stringResource(R.string.known_hosts),
+                                subtitle = stringResource(R.string.known_hosts_subtitle),
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = strictHostKeyChecking,
+                                onClick = onNavigateToKnownHostList,
+                            )
+                            SettingsSwitchItem(
+                                title = stringResource(R.string.strict_host_key_checking),
+                                checked = strictHostKeyChecking,
+                                onCheckedChange = { settingsViewModel.setStrictHostKeyChecking(it) },
+                            )
+                            SettingsSwitchItem(
+                                title = stringResource(R.string.allow_password_prompting),
+                                checked = allowPasswordPrompting,
+                                onCheckedChange = { settingsViewModel.setAllowPasswordPrompting(it) },
+                            )
+                        }
+
+                        HorizontalDivider()
+
+                        SettingsGroup(stringResource(R.string.sharing)) {
+                            SettingsSwitchItem(
+                                title = stringResource(R.string.share_target_enabled),
+                                checked = shareTargetEnabled,
+                                onCheckedChange = { settingsViewModel.setShareTargetEnabled(it) },
+                            )
+                            if (shareTargetEnabled) {
+                                Text(
+                                    stringResource(R.string.share_target_enabled_subtitle),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp)
+                                        .padding(bottom = 16.dp),
+                                )
                             }
-                        },
-                    )
-                }
+                        }
 
-                HorizontalDivider()
+                        HorizontalDivider()
 
-                SettingsGroup(stringResource(R.string.security)) {
-                    SettingsItem(
-                        title = stringResource(R.string.ssh_keys),
-                        subtitle = stringResource(R.string.ssh_keys_subtitle),
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = onNavigateToIdentityList,
-                    )
-                    SettingsItem(
-                        title = stringResource(R.string.known_hosts),
-                        subtitle = stringResource(R.string.known_hosts_subtitle),
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = strictHostKeyChecking,
-                        onClick = onNavigateToKnownHostList,
-                    )
-                    SettingsSwitchItem(
-                        title = stringResource(R.string.strict_host_key_checking),
-                        checked = strictHostKeyChecking,
-                        onCheckedChange = { settingsViewModel.setStrictHostKeyChecking(it) },
-                    )
-                    SettingsSwitchItem(
-                        title = stringResource(R.string.allow_password_prompting),
-                        checked = allowPasswordPrompting,
-                        onCheckedChange = { settingsViewModel.setAllowPasswordPrompting(it) },
-                    )
-                }
+                        SettingsGroup(stringResource(R.string.data)) {
+                            SettingsItem(
+                                title = stringResource(R.string.export_to_file),
+                                subtitle = stringResource(R.string.export_to_file_subtitle),
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault())
+                                    val filename = "ssh-remote-settings-${dateFormat.format(Date())}.json"
+                                    exportLauncher.launch(filename)
+                                },
+                            )
+                            SettingsItem(
+                                title = stringResource(R.string.import_from_file),
+                                subtitle = stringResource(R.string.import_from_file_subtitle),
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { importLauncher.launch(arrayOf("application/json")) },
+                            )
+                            SettingsItem(
+                                title = stringResource(R.string.export_to_qr_code),
+                                subtitle = stringResource(R.string.export_to_qr_code_subtitle),
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    coroutineScope.launch {
+                                        exportJson = settingsViewModel.exportSettingsToString(context)
+                                    }
+                                },
+                            )
+                            val scanPrompt = stringResource(R.string.scan_qr_code_settings_prompt)
+                            SettingsItem(
+                                title = stringResource(R.string.import_from_qr_code),
+                                subtitle = stringResource(R.string.import_from_qr_code_subtitle),
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    val options = ScanOptions()
+                                    options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                    options.setPrompt(scanPrompt)
+                                    options.setBeepEnabled(false)
+                                    options.setOrientationLocked(false)
+                                    qrScanLauncher.launch(options)
+                                },
+                            )
+                        }
 
-                HorizontalDivider()
+                        HorizontalDivider()
 
-                SettingsGroup(stringResource(R.string.sharing)) {
-                    SettingsSwitchItem(
-                        title = stringResource(R.string.share_target_enabled),
-                        checked = shareTargetEnabled,
-                        onCheckedChange = { settingsViewModel.setShareTargetEnabled(it) },
-                    )
-                    if (shareTargetEnabled) {
-                        Text(
-                            stringResource(R.string.share_target_enabled_subtitle),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .padding(bottom = 16.dp),
-                        )
+                        SettingsGroup(stringResource(R.string.about_app)) {
+                            SettingsItem(
+                                title = stringResource(R.string.app_version),
+                                subtitle = BuildConfig.VERSION_NAME,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            SettingsItem(
+                                title = stringResource(R.string.author),
+                                subtitle = stringResource(R.string.author_name),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            SettingsItem(
+                                title = stringResource(R.string.donate),
+                                subtitle = stringResource(R.string.support_developer),
+                                modifier = Modifier.fillMaxWidth(),
+                                icon = Icons.AutoMirrored.Filled.OpenInNew,
+                                onClick = { uriHandler.openUri("https://stefansundin.github.io/donate") },
+                            )
+                            SettingsItem(
+                                title = stringResource(R.string.license),
+                                subtitle = stringResource(R.string.license_name),
+                                modifier = Modifier.fillMaxWidth(),
+                                icon = Icons.AutoMirrored.Filled.OpenInNew,
+                                onClick = { uriHandler.openUri("https://www.gnu.org/licenses/gpl-3.0.html") },
+                            )
+                            SettingsItem(
+                                title = stringResource(R.string.source_code),
+                                subtitle = stringResource(R.string.view_on_github),
+                                modifier = Modifier.fillMaxWidth(),
+                                icon = Icons.AutoMirrored.Filled.OpenInNew,
+                                onClick = { uriHandler.openUri("https://github.com/stefansundin/SSHRemote") },
+                            )
+                            SettingsItem(
+                                title = stringResource(R.string.ssh_library),
+                                subtitle = stringResource(
+                                    R.string.ssh_library_subtitle,
+                                    BuildConfig.SSH_LIBRARY_NAME,
+                                    BuildConfig.SSH_LIBRARY_VERSION,
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                                icon = Icons.AutoMirrored.Filled.OpenInNew,
+                                onClick = { uriHandler.openUri(BuildConfig.SSH_LIBRARY_URL) },
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
-
-                HorizontalDivider()
-
-                SettingsGroup(stringResource(R.string.data)) {
-                    SettingsItem(
-                        title = stringResource(R.string.export_to_file),
-                        subtitle = stringResource(R.string.export_to_file_subtitle),
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault())
-                            val filename = "ssh-remote-settings-${dateFormat.format(Date())}.json"
-                            exportLauncher.launch(filename)
-                        },
-                    )
-                    SettingsItem(
-                        title = stringResource(R.string.import_from_file),
-                        subtitle = stringResource(R.string.import_from_file_subtitle),
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { importLauncher.launch(arrayOf("application/json")) },
-                    )
-                    SettingsItem(
-                        title = stringResource(R.string.export_to_qr_code),
-                        subtitle = stringResource(R.string.export_to_qr_code_subtitle),
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            coroutineScope.launch {
-                                exportJson = settingsViewModel.exportSettingsToString(context)
-                            }
-                        },
-                    )
-                    val scanPrompt = stringResource(R.string.scan_qr_code_settings_prompt)
-                    SettingsItem(
-                        title = stringResource(R.string.import_from_qr_code),
-                        subtitle = stringResource(R.string.import_from_qr_code_subtitle),
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            val options = ScanOptions()
-                            options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                            options.setPrompt(scanPrompt)
-                            options.setBeepEnabled(false)
-                            options.setOrientationLocked(false)
-                            qrScanLauncher.launch(options)
-                        },
-                    )
-                }
-
-                HorizontalDivider()
-
-                SettingsGroup(stringResource(R.string.about_app)) {
-                    SettingsItem(
-                        title = stringResource(R.string.app_version),
-                        subtitle = BuildConfig.VERSION_NAME,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    SettingsItem(
-                        title = stringResource(R.string.author),
-                        subtitle = stringResource(R.string.author_name),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    SettingsItem(
-                        title = stringResource(R.string.donate),
-                        subtitle = stringResource(R.string.support_developer),
-                        modifier = Modifier.fillMaxWidth(),
-                        icon = Icons.AutoMirrored.Filled.OpenInNew,
-                        onClick = { uriHandler.openUri("https://stefansundin.github.io/donate") },
-                    )
-                    SettingsItem(
-                        title = stringResource(R.string.license),
-                        subtitle = stringResource(R.string.license_name),
-                        modifier = Modifier.fillMaxWidth(),
-                        icon = Icons.AutoMirrored.Filled.OpenInNew,
-                        onClick = { uriHandler.openUri("https://www.gnu.org/licenses/gpl-3.0.html") },
-                    )
-                    SettingsItem(
-                        title = stringResource(R.string.source_code),
-                        subtitle = stringResource(R.string.view_on_github),
-                        modifier = Modifier.fillMaxWidth(),
-                        icon = Icons.AutoMirrored.Filled.OpenInNew,
-                        onClick = { uriHandler.openUri("https://github.com/stefansundin/SSHRemote") },
-                    )
-                    SettingsItem(
-                        title = stringResource(R.string.ssh_library),
-                        subtitle = stringResource(
-                            R.string.ssh_library_subtitle,
-                            BuildConfig.SSH_LIBRARY_NAME,
-                            BuildConfig.SSH_LIBRARY_VERSION,
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        icon = Icons.AutoMirrored.Filled.OpenInNew,
-                        onClick = { uriHandler.openUri(BuildConfig.SSH_LIBRARY_URL) },
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }

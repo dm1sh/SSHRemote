@@ -18,6 +18,7 @@
 
 package com.stefansundin.sshremote.ui.components
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -48,10 +50,10 @@ internal fun ScrollbarContainer(
     horizontalScrollState: ScrollState? = null,
     content: @Composable (Modifier) -> Unit,
 ) {
-    val visibleVerticalScrollState = verticalScrollState?.takeIf { it.maxValue > 0 }
-    val visibleHorizontalScrollState = horizontalScrollState?.takeIf { it.maxValue > 0 }
-    val verticalGutter = visibleVerticalScrollState.hasScrollbar().gutterSize()
-    val horizontalGutter = visibleHorizontalScrollState.hasScrollbar().gutterSize()
+    val visibleVerticalScrollState = verticalScrollState?.takeIf { it.maxValue != Int.MAX_VALUE }
+    val visibleHorizontalScrollState = horizontalScrollState?.takeIf { it.maxValue != Int.MAX_VALUE }
+    val verticalGutter = verticalScrollState.gutterSize()
+    val horizontalGutter = horizontalScrollState.gutterSize()
 
     Box(modifier = modifier) {
         content(
@@ -80,6 +82,31 @@ internal fun ScrollbarContainer(
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
                     .padding(end = verticalGutter),
+            )
+        }
+    }
+}
+
+@Composable
+internal fun ScrollbarContainer(
+    modifier: Modifier = Modifier,
+    verticalLazyListState: LazyListState? = null,
+    content: @Composable (Modifier) -> Unit,
+) {
+    val visibleVerticalLazyListState = verticalLazyListState?.takeIf { it.canScrollForward || it.canScrollBackward }
+    val verticalGutter = verticalLazyListState.gutterSize()
+
+    Box(modifier = modifier) {
+        content(
+            Modifier.padding(end = verticalGutter),
+        )
+
+        visibleVerticalLazyListState?.let { state ->
+            LazyListScrollbar(
+                state = state,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .fillMaxHeight(),
             )
         }
     }
@@ -157,6 +184,50 @@ private fun calculateScrollbarThumbOffset(
     return scrollRange * (scrollState.value / scrollState.maxValue.toFloat())
 }
 
-private fun Boolean.gutterSize(): Dp = if (this) ScrollbarGutterSize else 0.dp
+@SuppressLint("FrequentlyChangingValue")
+@Composable
+private fun LazyListScrollbar(
+    state: LazyListState,
+    modifier: Modifier = Modifier,
+) {
+    val color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+    val layoutInfo = state.layoutInfo
+    val totalItems = layoutInfo.totalItemsCount
+    if (totalItems <= 0) return
 
-private fun ScrollState?.hasScrollbar(): Boolean = this != null
+    val visibleItems = layoutInfo.visibleItemsInfo
+    val firstVisibleItem = visibleItems.firstOrNull() ?: return
+    val lastVisibleItem = visibleItems.lastOrNull() ?: return
+
+    Canvas(modifier = modifier.width(ScrollbarGutterSize)) {
+        val thicknessPx = ScrollbarThickness.toPx()
+        val paddingPx = ScrollbarPadding.toPx()
+        val minThumbLengthPx = ScrollbarMinThumbLength.toPx()
+        val trackLength = (size.height - (paddingPx * 2)).coerceAtLeast(0f)
+        if (trackLength <= 0f) return@Canvas
+
+        val visibleSpan = (lastVisibleItem.index - firstVisibleItem.index + 1).coerceAtLeast(1)
+        val estimatedItemSize = ((lastVisibleItem.offset + lastVisibleItem.size) - firstVisibleItem.offset)
+            .toFloat()
+            .coerceAtLeast(1f) / visibleSpan
+        val estimatedContentLength = estimatedItemSize * totalItems
+        val thumbLength = (trackLength * trackLength / estimatedContentLength)
+            .coerceIn(minThumbLengthPx, trackLength)
+
+        val maxScrollItems = (totalItems - visibleSpan).coerceAtLeast(1)
+        val scrollProgress =
+            (firstVisibleItem.index + (firstVisibleItem.offset / estimatedItemSize)) / maxScrollItems.toFloat()
+        val thumbOffset = ((trackLength - thumbLength).coerceAtLeast(0f) * scrollProgress.coerceIn(0f, 1f))
+
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(size.width - paddingPx - thicknessPx, paddingPx + thumbOffset),
+            size = Size(thicknessPx, thumbLength),
+            cornerRadius = CornerRadius(thicknessPx / 2, thicknessPx / 2),
+        )
+    }
+}
+
+private fun ScrollState?.gutterSize(): Dp = if (this != null) ScrollbarGutterSize else 0.dp
+
+private fun LazyListState?.gutterSize(): Dp = if (this != null) ScrollbarGutterSize else 0.dp

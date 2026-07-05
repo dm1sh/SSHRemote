@@ -59,6 +59,7 @@ fun CommandList(
 ) {
     val view = LocalView.current
     val scope = rememberCoroutineScope()
+    val verticalScrollState = rememberScrollState()
 
     if (commands.isEmpty()) {
         Column(
@@ -80,30 +81,34 @@ fun CommandList(
             )
         }
     } else {
-        Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            commands.forEach { command ->
-                Button(
-                    onClick = {
-                        view.playSoundEffect(SoundEffectConstants.CLICK)
-                        val commandText = command.command ?: return@Button
-                        scope.launch {
-                            hostViewModel.runCommand(
-                                command = commandText,
-                                showOutput = command.showOutput,
-                                renderOutputAsMarkdown = command.renderOutputAsMarkdown,
-                            )
-                        }
-                    },
-                    enabled = connectionStatus == ConnectionStatus.CONNECTED,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(command.displayText())
+        ScrollbarContainer(
+            modifier = modifier,
+            verticalScrollState = verticalScrollState,
+        ) { contentModifier ->
+            Column(
+                modifier = contentModifier
+                    .padding(16.dp)
+                    .verticalScroll(verticalScrollState),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                commands.forEach { command ->
+                    Button(
+                        onClick = {
+                            view.playSoundEffect(SoundEffectConstants.CLICK)
+                            val commandText = command.command ?: return@Button
+                            scope.launch {
+                                hostViewModel.runCommand(
+                                    command = commandText,
+                                    showOutput = command.showOutput,
+                                    renderOutputAsMarkdown = command.renderOutputAsMarkdown,
+                                )
+                            }
+                        },
+                        enabled = connectionStatus == ConnectionStatus.CONNECTED,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(command.displayText())
+                    }
                 }
             }
         }

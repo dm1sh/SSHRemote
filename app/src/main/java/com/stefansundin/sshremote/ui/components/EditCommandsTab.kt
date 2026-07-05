@@ -117,67 +117,73 @@ fun EditCommandsTab(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            state = commandsListState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentPadding = PaddingValues(bottom = 160.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(commands, key = { it.id }) { command ->
-                ReorderableItem(reorderableLazyListState, key = command.id) {
-                    val interactionSource = remember { MutableInteractionSource() }
+        ScrollbarContainer(
+            modifier = Modifier.fillMaxSize(),
+            verticalLazyListState = commandsListState,
+        ) { contentModifier ->
+            LazyColumn(
+                state = commandsListState,
+                modifier = contentModifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentPadding = PaddingValues(bottom = 160.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(commands, key = { it.id }) { command ->
+                    ReorderableItem(reorderableLazyListState, key = command.id) {
+                        val interactionSource = remember { MutableInteractionSource() }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(
-                            modifier = Modifier
-                                .draggableHandle(
-                                    onDragStarted = {
-                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                                    },
-                                    onDragStopped = {
-                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                    },
-                                    interactionSource = interactionSource,
-                                )
-                                .clearAndSetSemantics { },
-                            onClick = {},
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Rounded.DragHandle, contentDescription = stringResource(R.string.reorder))
-                        }
-                        Text(
-                            text = command.displayText(),
-                            modifier = Modifier.weight(1f),
-                        )
-                        IconButton(
-                            onClick = {
-                                view.playSoundEffect(SoundEffectConstants.CLICK)
-                                onEditCommand(command)
-                            },
-                        ) {
-                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit))
-                        }
-                        IconButton(
-                            onClick = {
-                                view.playSoundEffect(SoundEffectConstants.CLICK)
-                                val deletedCommandIndex = commands.indexOfFirst { it.id == command.id }
-                                if (deletedCommandIndex >= 0) {
-                                    val newCommands = commands.toMutableList().apply { removeAt(deletedCommandIndex) }
-                                    onCommandsChanged(newCommands)
-                                    undoableDeletedCommand = deletedCommandIndex to command
-                                }
-                            },
-                        ) {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = stringResource(R.string.delete),
-                                tint = MaterialTheme.colorScheme.error,
+                            IconButton(
+                                modifier = Modifier
+                                    .draggableHandle(
+                                        onDragStarted = {
+                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                                        },
+                                        onDragStopped = {
+                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                        },
+                                        interactionSource = interactionSource,
+                                    )
+                                    .clearAndSetSemantics { },
+                                onClick = {},
+                            ) {
+                                Icon(Icons.Rounded.DragHandle, contentDescription = stringResource(R.string.reorder))
+                            }
+                            Text(
+                                text = command.displayText(),
+                                modifier = Modifier.weight(1f),
                             )
+                            IconButton(
+                                onClick = {
+                                    view.playSoundEffect(SoundEffectConstants.CLICK)
+                                    onEditCommand(command)
+                                },
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit))
+                            }
+                            IconButton(
+                                onClick = {
+                                    view.playSoundEffect(SoundEffectConstants.CLICK)
+                                    val deletedCommandIndex = commands.indexOfFirst { it.id == command.id }
+                                    if (deletedCommandIndex >= 0) {
+                                        val newCommands =
+                                            commands.toMutableList().apply { removeAt(deletedCommandIndex) }
+                                        onCommandsChanged(newCommands)
+                                        undoableDeletedCommand = deletedCommandIndex to command
+                                    }
+                                },
+                            ) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.delete),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            }
                         }
                     }
                 }

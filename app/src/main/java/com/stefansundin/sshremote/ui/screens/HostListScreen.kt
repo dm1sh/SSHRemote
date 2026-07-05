@@ -77,6 +77,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.stefansundin.sshremote.R
 import com.stefansundin.sshremote.data.host.Host
+import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.components.TextWithInlineIcon
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.delay
@@ -254,36 +255,41 @@ fun HostListScreen(
                     )
                 }
             } else {
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(bottom = 140.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(16.dp),
-                ) {
-                    items(items = hosts, key = { host -> host.id }) { host ->
-                        HostItem(
-                            host = host,
-                            onConnect = {
-                                undoableDeletedHostId = null
-                                onConnectClicked(host)
-                            },
-                            onEdit = {
-                                undoableDeletedHostId = null
-                                onEdit(host)
-                            },
-                            onClone = {
-                                undoableDeletedHostId = null
-                                onClone(host)
-                            },
-                            onCreateShortcut = {
-                                undoableDeletedHostId = null
-                                onCreateShortcut(host)
-                            },
-                            onDelete = {
-                                onDelete(host)
-                                undoableDeletedHostId = host.id
-                            },
-                        )
+                ScrollbarContainer(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalLazyListState = listState,
+                ) { contentModifier ->
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(bottom = 140.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = contentModifier.padding(16.dp),
+                    ) {
+                        items(items = hosts, key = { host -> host.id }) { host ->
+                            HostItem(
+                                host = host,
+                                onConnect = {
+                                    undoableDeletedHostId = null
+                                    onConnectClicked(host)
+                                },
+                                onEdit = {
+                                    undoableDeletedHostId = null
+                                    onEdit(host)
+                                },
+                                onClone = {
+                                    undoableDeletedHostId = null
+                                    onClone(host)
+                                },
+                                onCreateShortcut = {
+                                    undoableDeletedHostId = null
+                                    onCreateShortcut(host)
+                                },
+                                onDelete = {
+                                    onDelete(host)
+                                    undoableDeletedHostId = host.id
+                                },
+                            )
+                        }
                     }
                 }
             }

@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -72,6 +73,7 @@ import com.stefansundin.sshremote.R
 import com.stefansundin.sshremote.data.adhoccommand.AdHocCommand
 import com.stefansundin.sshremote.data.host.RemoteUiState
 import com.stefansundin.sshremote.ui.components.CommandOutputDialog
+import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,6 +90,7 @@ fun AdHocCommandScreen(
     var commandText by rememberSaveable { mutableStateOf("") }
     var showMenu by rememberSaveable { mutableStateOf(false) }
     var showContextMenuFor by rememberSaveable { mutableStateOf<AdHocCommand?>(null) }
+    val commandHistoryListState = rememberLazyListState()
     val view = LocalView.current
 
     val executeAndStay: () -> Unit = {
@@ -161,46 +164,56 @@ fun AdHocCommandScreen(
                 .padding(innerPadding)
                 .imePadding(),
         ) {
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(commands, key = { it.command }) { command ->
-                    Box {
-                        Text(
-                            text = command.command,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .combinedClickable(
-                                    onClick = {
-                                        view.playSoundEffect(SoundEffectConstants.CLICK)
-                                        if (commandText == command.command) {
-                                            executeAndStay()
-                                        } else {
-                                            commandText = command.command
-                                        }
-                                    },
-                                    onLongClick = {
-                                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                                        showContextMenuFor = command
-                                    },
+            Box(modifier = Modifier.weight(1f)) {
+                ScrollbarContainer(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalLazyListState = commandHistoryListState,
+                ) { contentModifier ->
+                    LazyColumn(
+                        state = commandHistoryListState,
+                        modifier = contentModifier.fillMaxWidth(),
+                    ) {
+                        items(commands, key = { it.command }) { command ->
+                            Box {
+                                Text(
+                                    text = command.command,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = {
+                                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                                if (commandText == command.command) {
+                                                    executeAndStay()
+                                                } else {
+                                                    commandText = command.command
+                                                }
+                                            },
+                                            onLongClick = {
+                                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                                showContextMenuFor = command
+                                            },
+                                        )
+                                        .padding(16.dp),
                                 )
-                                .padding(16.dp),
-                        )
-                        DropdownMenu(
-                            expanded = showContextMenuFor == command,
-                            onDismissRequest = { showContextMenuFor = null },
-                        ) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        stringResource(R.string.delete),
-                                        color = MaterialTheme.colorScheme.error,
+                                DropdownMenu(
+                                    expanded = showContextMenuFor == command,
+                                    onDismissRequest = { showContextMenuFor = null },
+                                ) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(R.string.delete),
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        },
+                                        onClick = {
+                                            view.playSoundEffect(SoundEffectConstants.CLICK)
+                                            onDeleteCommand(command)
+                                            showContextMenuFor = null
+                                        },
                                     )
-                                },
-                                onClick = {
-                                    view.playSoundEffect(SoundEffectConstants.CLICK)
-                                    onDeleteCommand(command)
-                                    showContextMenuFor = null
-                                },
-                            )
+                                }
+                            }
                         }
                     }
                 }

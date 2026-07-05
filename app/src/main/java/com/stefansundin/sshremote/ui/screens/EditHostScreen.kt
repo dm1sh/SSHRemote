@@ -104,6 +104,7 @@ import com.stefansundin.sshremote.data.settings.ExportedCommand
 import com.stefansundin.sshremote.data.settings.ExportedHost
 import com.stefansundin.sshremote.data.settings.ISettingsViewModel
 import com.stefansundin.sshremote.ui.components.QrCodeDialog
+import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.dpadFocusable
 import com.stefansundin.sshremote.ui.portraitImePadding
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
@@ -621,284 +622,292 @@ fun EditHostScreen(
             }
         },
     ) { innerPadding ->
-        Column(
+        val verticalScrollState = rememberScrollState()
+
+        ScrollbarContainer(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(16.dp)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // NAME FIELD
-            OutlinedTextField(
-                value = name,
-                onValueChange = { newName ->
-                    // Allow one newline, limit to 100 chars
-                    val newlineCount = newName.count { it == '\n' }
-                    if (newlineCount <= 1) {
-                        name = newName.take(100)
-                    }
-                },
-                label = { Text(stringResource(R.string.name)) },
-                modifier = Modifier
-                    .bringIntoViewRequester(nameRequester)
-                    .fillMaxWidth()
-                    .dpadFocusable(),
-                isError = hasBeenSubmitted && !isNameValid,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next,
-                ),
-            )
-
-            // HOSTNAME FIELD
-            OutlinedTextField(
-                value = hostname,
-                onValueChange = { newHostname ->
-                    // Disallow spaces and newlines
-                    hostname = newHostname.replace(" ", "").replace("\n", "").take(255)
-                },
-                label = { Text(stringResource(R.string.hostname_or_ip)) },
-                modifier = Modifier
-                    .bringIntoViewRequester(hostnameRequester)
-                    .fillMaxWidth()
-                    .dpadFocusable(),
-                isError = hasBeenSubmitted && !isHostValid,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next,
-                ),
-            )
-
-            // PORT FIELD
-            OutlinedTextField(
-                value = port,
-                onValueChange = { newPort ->
-                    // Allow only digits
-                    if (newPort.all { it.isDigit() }) {
-                        port = newPort.take(5)
-                    }
-                },
-                label = { Text(stringResource(R.string.port)) },
-                modifier = Modifier
-                    .bringIntoViewRequester(portRequester)
-                    .fillMaxWidth()
-                    .dpadFocusable(),
-                isError = hasBeenSubmitted && !isPortValid,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Next,
-                ),
-            )
-
-            // USER FIELD
-            var userDropdownExpanded by rememberSaveable { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = userDropdownExpanded,
-                onExpandedChange = { userDropdownExpanded = !userDropdownExpanded },
+                .fillMaxSize(),
+            verticalScrollState = verticalScrollState,
+        ) { contentModifier ->
+            Column(
+                modifier = contentModifier
+                    .padding(16.dp)
+                    .fillMaxSize()
+                    .verticalScroll(verticalScrollState),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                // NAME FIELD
                 OutlinedTextField(
-                    value = user,
-                    onValueChange = { newUser ->
-                        // Disallow spaces and newlines
-                        user = newUser.replace(" ", "").replace("\n", "").take(32)
+                    value = name,
+                    onValueChange = { newName ->
+                        // Allow one newline, limit to 100 chars
+                        val newlineCount = newName.count { it == '\n' }
+                        if (newlineCount <= 1) {
+                            name = newName.take(100)
+                        }
                     },
-                    label = { Text(stringResource(R.string.user)) },
+                    label = { Text(stringResource(R.string.name)) },
                     modifier = Modifier
-                        .bringIntoViewRequester(userRequester)
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+                        .bringIntoViewRequester(nameRequester)
                         .fillMaxWidth()
                         .dpadFocusable(),
-                    isError = hasBeenSubmitted && !isUserValid,
+                    isError = hasBeenSubmitted && !isNameValid,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         imeAction = ImeAction.Next,
                     ),
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = userDropdownExpanded)
-                    },
                 )
 
-                val suggestedUsers = allUsers.distinct().sorted()
-                if (suggestedUsers.isNotEmpty()) {
-                    ExposedDropdownMenu(
-                        expanded = userDropdownExpanded,
-                        onDismissRequest = { userDropdownExpanded = false },
-                    ) {
-                        suggestedUsers.forEach { suggestedUser ->
-                            DropdownMenuItem(
-                                text = { Text(suggestedUser) },
-                                onClick = {
+                // HOSTNAME FIELD
+                OutlinedTextField(
+                    value = hostname,
+                    onValueChange = { newHostname ->
+                        // Disallow spaces and newlines
+                        hostname = newHostname.replace(" ", "").replace("\n", "").take(255)
+                    },
+                    label = { Text(stringResource(R.string.hostname_or_ip)) },
+                    modifier = Modifier
+                        .bringIntoViewRequester(hostnameRequester)
+                        .fillMaxWidth()
+                        .dpadFocusable(),
+                    isError = hasBeenSubmitted && !isHostValid,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Next,
+                    ),
+                )
+
+                // PORT FIELD
+                OutlinedTextField(
+                    value = port,
+                    onValueChange = { newPort ->
+                        // Allow only digits
+                        if (newPort.all { it.isDigit() }) {
+                            port = newPort.take(5)
+                        }
+                    },
+                    label = { Text(stringResource(R.string.port)) },
+                    modifier = Modifier
+                        .bringIntoViewRequester(portRequester)
+                        .fillMaxWidth()
+                        .dpadFocusable(),
+                    isError = hasBeenSubmitted && !isPortValid,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next,
+                    ),
+                )
+
+                // USER FIELD
+                var userDropdownExpanded by rememberSaveable { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = userDropdownExpanded,
+                    onExpandedChange = { userDropdownExpanded = !userDropdownExpanded },
+                ) {
+                    OutlinedTextField(
+                        value = user,
+                        onValueChange = { newUser ->
+                            // Disallow spaces and newlines
+                            user = newUser.replace(" ", "").replace("\n", "").take(32)
+                        },
+                        label = { Text(stringResource(R.string.user)) },
+                        modifier = Modifier
+                            .bringIntoViewRequester(userRequester)
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+                            .fillMaxWidth()
+                            .dpadFocusable(),
+                        isError = hasBeenSubmitted && !isUserValid,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
+                        ),
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = userDropdownExpanded)
+                        },
+                    )
+
+                    val suggestedUsers = allUsers.distinct().sorted()
+                    if (suggestedUsers.isNotEmpty()) {
+                        ExposedDropdownMenu(
+                            expanded = userDropdownExpanded,
+                            onDismissRequest = { userDropdownExpanded = false },
+                        ) {
+                            suggestedUsers.forEach { suggestedUser ->
+                                DropdownMenuItem(
+                                    text = { Text(suggestedUser) },
+                                    onClick = {
+                                        view.playSoundEffect(SoundEffectConstants.CLICK)
+                                        user = suggestedUser
+                                        userDropdownExpanded = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // PASSWORD FIELD
+                if (showPasswordField) {
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text(stringResource(R.string.password)) },
+                        supportingText = {
+                            Text(
+                                stringResource(
+                                    if (passwordState == PasswordState.LOST) {
+                                        R.string.passwords_not_backed_up
+                                    } else if (isPasswordSet) {
+                                        R.string.enter_new_password_or_empty
+                                    } else if (allowPasswordPrompting) {
+                                        R.string.optional_password_prompt
+                                    } else {
+                                        R.string.optional
+                                    },
+                                ),
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .dpadFocusable(),
+                        singleLine = true,
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done,
+                        ),
+                        trailingIcon = {
+                            val image =
+                                if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                            val description =
+                                stringResource(if (passwordVisible) R.string.hide_password else R.string.show_password)
+                            IconToggleButton(
+                                checked = passwordVisible,
+                                onCheckedChange = {
                                     view.playSoundEffect(SoundEffectConstants.CLICK)
-                                    user = suggestedUser
-                                    userDropdownExpanded = false
+                                    passwordVisible = it
                                 },
+                            ) {
+                                Icon(imageVector = image, contentDescription = description)
+                            }
+                        },
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = stringResource(if (passwordState == PasswordState.LOST) R.string.password_lost else R.string.password_saved),
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                        TextButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                userWantsToChangePassword = true
+                            },
+                        ) {
+                            Text(
+                                stringResource(if (passwordState == PasswordState.LOST) R.string.re_enter else R.string.change_or_clear),
                             )
                         }
                     }
                 }
-            }
 
-            // PASSWORD FIELD
-            if (showPasswordField) {
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text(stringResource(R.string.password)) },
-                    supportingText = {
-                        Text(
-                            stringResource(
-                                if (passwordState == PasswordState.LOST) {
-                                    R.string.passwords_not_backed_up
-                                } else if (isPasswordSet) {
-                                    R.string.enter_new_password_or_empty
-                                } else if (allowPasswordPrompting) {
-                                    R.string.optional_password_prompt
-                                } else {
-                                    R.string.optional
-                                },
-                            ),
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .dpadFocusable(),
-                    singleLine = true,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Done,
-                    ),
-                    trailingIcon = {
-                        val image =
-                            if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                        val description =
-                            stringResource(if (passwordVisible) R.string.hide_password else R.string.show_password)
-                        IconToggleButton(
-                            checked = passwordVisible,
-                            onCheckedChange = {
-                                view.playSoundEffect(SoundEffectConstants.CLICK)
-                                passwordVisible = it
-                            },
-                        ) {
-                            Icon(imageVector = image, contentDescription = description)
-                        }
-                    },
-                )
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                // SSH KEY SELECTION DROPDOWN
+                ExposedDropdownMenuBox(
+                    expanded = identityDropdownExpanded,
+                    onExpandedChange = { if (identities != null) identityDropdownExpanded = !identityDropdownExpanded },
                 ) {
-                    Text(
-                        text = stringResource(if (passwordState == PasswordState.LOST) R.string.password_lost else R.string.password_saved),
-                        modifier = Modifier.padding(start = 8.dp),
-                    )
-                    TextButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            userWantsToChangePassword = true
+                    OutlinedTextField(
+                        readOnly = true,
+                        value = if (identities == null) {
+                            stringResource(R.string.loading)
+                        } else if (selectedIdentityIds == null) {
+                            stringResource(R.string.use_any_key)
+                        } else if (selectedIdentityIds!!.isEmpty()) {
+                            stringResource(R.string.do_not_use_keys)
+                        } else {
+                            identities.filter { selectedIdentityIds!!.contains(it.id) }
+                                .joinToString(", ") { it.name }
                         },
-                    ) {
-                        Text(
-                            stringResource(if (passwordState == PasswordState.LOST) R.string.re_enter else R.string.change_or_clear),
-                        )
-                    }
-                }
-            }
-
-            // SSH KEY SELECTION DROPDOWN
-            ExposedDropdownMenuBox(
-                expanded = identityDropdownExpanded,
-                onExpandedChange = { if (identities != null) identityDropdownExpanded = !identityDropdownExpanded },
-            ) {
-                OutlinedTextField(
-                    readOnly = true,
-                    value = if (identities == null) {
-                        stringResource(R.string.loading)
-                    } else if (selectedIdentityIds == null) {
-                        stringResource(R.string.use_any_key)
-                    } else if (selectedIdentityIds!!.isEmpty()) {
-                        stringResource(R.string.do_not_use_keys)
-                    } else {
-                        identities.filter { selectedIdentityIds!!.contains(it.id) }
-                            .joinToString(", ") { it.name }
-                    },
-                    onValueChange = { },
-                    label = { Text(stringResource(R.string.ssh_key)) },
-                    trailingIcon = {
-                        if (identities != null) {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = identityDropdownExpanded)
-                        }
-                    },
-                    modifier = Modifier
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
-                        .fillMaxWidth()
-                        .dpadFocusable(),
-                )
-                if (identities != null) {
-                    ExposedDropdownMenu(
-                        expanded = identityDropdownExpanded,
-                        onDismissRequest = { identityDropdownExpanded = false },
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.use_any_key)) },
-                            onClick = {
-                                view.playSoundEffect(SoundEffectConstants.CLICK)
-                                selectedIdentityIds = null
-                                identityDropdownExpanded = false
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.do_not_use_keys)) },
-                            onClick = {
-                                view.playSoundEffect(SoundEffectConstants.CLICK)
-                                selectedIdentityIds = listOf()
-                                identityDropdownExpanded = false
-                            },
-                        )
-                        identities.forEach { identity ->
+                        onValueChange = { },
+                        label = { Text(stringResource(R.string.ssh_key)) },
+                        trailingIcon = {
+                            if (identities != null) {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = identityDropdownExpanded)
+                            }
+                        },
+                        modifier = Modifier
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+                            .fillMaxWidth()
+                            .dpadFocusable(),
+                    )
+                    if (identities != null) {
+                        ExposedDropdownMenu(
+                            expanded = identityDropdownExpanded,
+                            onDismissRequest = { identityDropdownExpanded = false },
+                        ) {
                             DropdownMenuItem(
-                                text = { Text(identity.name) },
+                                text = { Text(stringResource(R.string.use_any_key)) },
                                 onClick = {
                                     view.playSoundEffect(SoundEffectConstants.CLICK)
-                                    // Later this might support multiple key assignments
-                                    selectedIdentityIds = listOf(identity.id)
+                                    selectedIdentityIds = null
                                     identityDropdownExpanded = false
                                 },
                             )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.do_not_use_keys)) },
+                                onClick = {
+                                    view.playSoundEffect(SoundEffectConstants.CLICK)
+                                    selectedIdentityIds = listOf()
+                                    identityDropdownExpanded = false
+                                },
+                            )
+                            identities.forEach { identity ->
+                                DropdownMenuItem(
+                                    text = { Text(identity.name) },
+                                    onClick = {
+                                        view.playSoundEffect(SoundEffectConstants.CLICK)
+                                        // Later this might support multiple key assignments
+                                        selectedIdentityIds = listOf(identity.id)
+                                        identityDropdownExpanded = false
+                                    },
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // KNOWN HOSTS MANAGEMENT
-            if (host != null || knownHosts.isNotEmpty()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    val keyCount = knownHosts.size
-                    Text(
-                        text = stringResource(R.string.saved_host_keys, keyCount),
-                        modifier = Modifier.padding(start = 8.dp),
-                    )
-                    Button(
-                        enabled = keyCount > 0,
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            knownHosts = emptyList()
-                        },
+                // KNOWN HOSTS MANAGEMENT
+                if (host != null || knownHosts.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text(stringResource(R.string.clear))
+                        val keyCount = knownHosts.size
+                        Text(
+                            text = stringResource(R.string.saved_host_keys, keyCount),
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                        Button(
+                            enabled = keyCount > 0,
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                knownHosts = emptyList()
+                            },
+                        ) {
+                            Text(stringResource(R.string.clear))
+                        }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(80.dp))
+                Spacer(Modifier.height(80.dp))
+            }
         }
     }
 }
