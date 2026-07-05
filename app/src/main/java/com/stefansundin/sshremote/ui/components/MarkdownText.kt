@@ -879,27 +879,32 @@ fun MarkdownText(
         }
 
         SelectionContainer {
-            Column(
-                modifier = modifier
-                    .onSizeChanged { viewportHeightPx = it.height }
-                    .verticalScroll(verticalScrollState),
-            ) {
-                for ((index, block) in blocks.withIndex()) {
-                    Box(
-                        modifier = Modifier
-                            .onGloballyPositioned { coordinates ->
-                                val top = coordinates.positionInParent().y
-                                val height = coordinates.size.height
-                                if (index in blockPositions.indices) {
-                                    if (blockPositions[index] != top || blockHeights[index] != height) {
-                                        blockPositions[index] = top
-                                        blockHeights[index] = height
-                                        layoutVersion++
+            ScrollbarContainer(
+                modifier = modifier,
+                verticalScrollState = verticalScrollState,
+            ) { contentModifier ->
+                Column(
+                    modifier = contentModifier
+                        .onSizeChanged { viewportHeightPx = it.height }
+                        .verticalScroll(verticalScrollState),
+                ) {
+                    for ((index, block) in blocks.withIndex()) {
+                        Box(
+                            modifier = Modifier
+                                .onGloballyPositioned { coordinates ->
+                                    val top = coordinates.positionInParent().y
+                                    val height = coordinates.size.height
+                                    if (index in blockPositions.indices) {
+                                        if (blockPositions[index] != top || blockHeights[index] != height) {
+                                            blockPositions[index] = top
+                                            blockHeights[index] = height
+                                            layoutVersion++
+                                        }
                                     }
-                                }
-                            },
-                    ) {
-                        RenderedBlockComposable(block)
+                                },
+                        ) {
+                            RenderedBlockComposable(block)
+                        }
                     }
                 }
             }
@@ -1369,6 +1374,7 @@ private fun RenderedTableComposable(table: RenderedBlock.RenderedTable) {
 
     val tableStateKey = "table-overflow-${table.id}"
     var overflow by rememberSaveable(tableStateKey) { mutableStateOf(MarkdownTableOverflowMode.Wrap) }
+    val horizontalScrollState = rememberScrollState()
 
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
@@ -1481,8 +1487,13 @@ private fun RenderedTableComposable(table: RenderedBlock.RenderedTable) {
             }
 
             if (overflow == MarkdownTableOverflowMode.Scroll) {
-                Box(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                    tableGrid()
+                ScrollbarContainer(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalScrollState = horizontalScrollState,
+                ) { contentModifier ->
+                    Box(modifier = contentModifier.horizontalScroll(horizontalScrollState)) {
+                        tableGrid()
+                    }
                 }
             } else {
                 tableGrid()

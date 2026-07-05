@@ -49,6 +49,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -157,16 +158,16 @@ fun CommandOutputDialog(
 
 @Composable
 private fun PlainTextOutput(output: String) {
+    val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
     val textMeasurer = rememberTextMeasurer()
     val view = LocalView.current
     val density = LocalDensity.current
     val textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace)
-    val wordWrapEnabled = remember { mutableStateOf(true) }
-    val showWordWrapToggle = remember { mutableStateOf(false) }
+    val wordWrapEnabled = rememberSaveable { mutableStateOf(true) }
 
     BoxWithConstraints {
-        remember(output, maxWidth, textStyle, density) {
+        val showWordWrapToggle = remember(output, maxWidth, textStyle, density) {
             val lines = output.split('\n')
             val maxLineWidth = lines.maxOfOrNull { line ->
                 textMeasurer.measure(line, style = textStyle).size.width
@@ -174,13 +175,11 @@ private fun PlainTextOutput(output: String) {
             val availableWidthPx = with(density) {
                 maxWidth.toPx()
             }
-            val needsHorizontalScroll = maxLineWidth > availableWidthPx
-            showWordWrapToggle.value = needsHorizontalScroll
-            needsHorizontalScroll
+            maxLineWidth > availableWidthPx
         }
 
-        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-            if (showWordWrapToggle.value) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (showWordWrapToggle) {
                 TextButton(
                     onClick = {
                         view.playSoundEffect(SoundEffectConstants.CLICK)
@@ -192,25 +191,36 @@ private fun PlainTextOutput(output: String) {
                 }
             }
 
-            SelectionContainer {
-                if (wordWrapEnabled.value) {
-                    Text(
-                        text = output,
-                        style = textStyle,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else {
-                    Text(
-                        text = output,
-                        style = textStyle,
-                        modifier = Modifier.horizontalScroll(horizontalScrollState),
-                        softWrap = false,
-                    )
+            ScrollbarContainer(
+                verticalScrollState = verticalScrollState,
+                horizontalScrollState = horizontalScrollState.takeUnless { wordWrapEnabled.value },
+                modifier = Modifier.fillMaxWidth(),
+            ) { contentModifier ->
+                SelectionContainer {
+                    if (wordWrapEnabled.value) {
+                        Text(
+                            text = output,
+                            style = textStyle,
+                            modifier = contentModifier
+                                .fillMaxWidth()
+                                .verticalScroll(verticalScrollState),
+                        )
+                    } else {
+                        Text(
+                            text = output,
+                            style = textStyle,
+                            modifier = contentModifier
+                                .verticalScroll(verticalScrollState)
+                                .horizontalScroll(horizontalScrollState),
+                            softWrap = false,
+                        )
+                    }
                 }
             }
         }
     }
 }
+
 
 private fun expandTabsForDisplay(text: String, tabWidth: Int = 8): String {
     if (!text.contains('\t')) return text
