@@ -42,12 +42,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
@@ -66,6 +70,7 @@ fun RepeatingButton(
     onLongClick: (() -> Unit)? = null,
     onDown: (() -> Unit)? = null,
     onUp: (() -> Unit)? = null,
+    forcedPressed: Boolean = false,
     repeating: Boolean = false,
     enabled: Boolean = true,
     shape: Shape = ButtonDefaults.shape,
@@ -82,6 +87,23 @@ fun RepeatingButton(
     val currentOnUp by rememberUpdatedState(onUp)
     val view = LocalView.current
     val scope = rememberCoroutineScope()
+    var forcedPressInteraction by remember { mutableStateOf<PressInteraction.Press?>(null) }
+
+    // This effect is used to force visual feedback when a physical key is used to invoke this button
+    LaunchedEffect(forcedPressed, enabled, interactionSource) {
+        if (forcedPressed && enabled) {
+            if (forcedPressInteraction == null) {
+                val pressInteraction = PressInteraction.Press(Offset.Zero)
+                interactionSource.emit(pressInteraction)
+                forcedPressInteraction = pressInteraction
+            }
+        } else {
+            forcedPressInteraction?.let { pressInteraction ->
+                interactionSource.emit(PressInteraction.Release(pressInteraction))
+                forcedPressInteraction = null
+            }
+        }
+    }
 
     val gestureModifier = if (enabled) {
         Modifier

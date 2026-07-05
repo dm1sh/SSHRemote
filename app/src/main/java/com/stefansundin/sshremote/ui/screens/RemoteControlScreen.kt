@@ -21,8 +21,8 @@ package com.stefansundin.sshremote.ui.screens
 import android.app.Activity
 import android.content.res.Configuration
 import android.os.Build
-import android.view.ViewConfiguration
 import android.view.SoundEffectConstants
+import android.view.ViewConfiguration
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusable
@@ -72,6 +72,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -135,10 +136,10 @@ import com.stefansundin.sshremote.ui.components.SelectIdentityDialog
 import com.stefansundin.sshremote.ui.components.SpecialKeysRow
 import com.stefansundin.sshremote.ui.dpadFocusable
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
@@ -548,6 +549,22 @@ fun RemoteControlScreen(
     val longPressTimeoutMillis = remember { ViewConfiguration.getLongPressTimeout().toLong() }
     val activePhysicalKeyStates = remember { mutableMapOf<Int, PhysicalKeyPressState>() }
     val activePressReleaseCounts = remember { mutableMapOf<RemoteControlKey, Int>() }
+    val pressedPhysicalRemoteKeys = remember { mutableStateMapOf<RemoteControlKey, Int>() }
+    val physicallyPressedKeys = pressedPhysicalRemoteKeys.keys.toSet()
+
+    fun markPhysicalRemoteKeyPressed(remoteKey: RemoteControlKey) {
+        val currentCount = pressedPhysicalRemoteKeys[remoteKey] ?: 0
+        pressedPhysicalRemoteKeys[remoteKey] = currentCount + 1
+    }
+
+    fun markPhysicalRemoteKeyReleased(remoteKey: RemoteControlKey) {
+        val currentCount = pressedPhysicalRemoteKeys[remoteKey] ?: return
+        if (currentCount <= 1) {
+            pressedPhysicalRemoteKeys.remove(remoteKey)
+        } else {
+            pressedPhysicalRemoteKeys[remoteKey] = currentCount - 1
+        }
+    }
 
     val hideKeyboard = {
         focusManager.clearFocus(force = true)
@@ -609,6 +626,7 @@ fun RemoteControlScreen(
 
         activePhysicalKeyStates.clear()
         activePressReleaseCounts.clear()
+        pressedPhysicalRemoteKeys.clear()
     }
 
     fun handlePhysicalKeyEvent(nativeKeyEvent: AndroidKeyEvent): Boolean {
@@ -634,6 +652,7 @@ fun RemoteControlScreen(
                         usesPressReleaseCommands = command.usesPressReleaseCommands(),
                     )
                     activePhysicalKeyStates[keyCode] = state
+                    markPhysicalRemoteKeyPressed(remoteKey)
 
                     when {
                         state.usesPressReleaseCommands -> {
@@ -687,6 +706,8 @@ fun RemoteControlScreen(
                     } else if (state.repeatJob == null && !state.longPressTriggered) {
                         handleRemoteControlEvent(KeyEvent.Click(state.remoteKey))
                     }
+
+                    markPhysicalRemoteKeyReleased(state.remoteKey)
                 }
 
                 true
@@ -923,6 +944,7 @@ fun RemoteControlScreen(
                                 connectionStatus = uiState.connectionStatus,
                                 volume = uiState.volume,
                                 muted = uiState.muted,
+                                pressedKeys = physicallyPressedKeys,
                                 onVolumeSet = { percent ->
                                     hostViewModel.setVolume(percent)
                                 },
