@@ -99,6 +99,7 @@ data class Command(
         // This may not be foolproof for all shell injection cases, so you should still be careful about what you're feeding this app.
         val escapedText = text.replace("'", "'\\''")
         val commandTemplate = requireNotNull(command) { "Command template is missing." }
-        return commandTemplate.format(escapedText)
+        // This does not use `format()` because %s may occur multiple times
+        return commandTemplate.replace("%s", escapedText)
     }
 }
