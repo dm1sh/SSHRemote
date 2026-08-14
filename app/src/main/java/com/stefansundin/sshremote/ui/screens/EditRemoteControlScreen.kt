@@ -124,7 +124,7 @@ fun EditRemoteControlScreen(
 
     val hasUnsavedChanges =
         editedRemoteCommands != normalizedRemoteCommands(
-            host.remoteCommands ?: emptyMap<RemoteControlKey, Command>(),
+            host.remoteCommands ?: emptyMap(),
         ) || editedCommands != host.commands ||
                 editedShareInBackground != host.shareInBackground || editedSmartVolumeSettings != host.smartVolume
     var showUnsavedBackDialog by rememberSaveable(host.id) { mutableStateOf(false) }

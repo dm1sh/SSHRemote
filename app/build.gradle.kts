@@ -54,6 +54,15 @@ android {
         generateLocaleConfig = true
     }
 
+    lint {
+        disable += "ExtraTranslation"
+    }
+
+    // Fix bouncycastle build error
+    packaging {
+        resources.excludes.add("META-INF/LICENSE.md")
+    }
+
     // Options to make F-Droid happy
     dependenciesInfo {
         includeInApk = false

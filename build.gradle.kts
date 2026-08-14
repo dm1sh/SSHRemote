@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.parcelize) apply false
 
     // https://github.com/google/ksp/releases
-    id("com.google.devtools.ksp") version "2.3.8" apply false
+    id("com.google.devtools.ksp") version "2.3.9" apply false
 
     // https://developer.android.com/jetpack/androidx/releases/room
     id("androidx.room") version "2.8.4" apply false
