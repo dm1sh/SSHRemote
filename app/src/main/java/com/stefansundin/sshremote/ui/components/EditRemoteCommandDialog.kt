@@ -68,16 +68,11 @@ fun EditRemoteCommandDialog(
     onAddToHomeScreen: (RemoteControlKey) -> Unit,
 ) {
     val (key, initialCommand) = command
-    var selectedModeName by rememberSaveable {
+    var selectedMode by rememberSaveable {
         mutableStateOf(
-            if (initialCommand.usesPressReleaseCommands()) {
-                RemoteCommandMode.PRESS_RELEASE.name
-            } else {
-                RemoteCommandMode.TAP.name
-            },
+            if (initialCommand.usesPressReleaseCommands()) RemoteCommandMode.PRESS_RELEASE else RemoteCommandMode.TAP,
         )
     }
-    val selectedMode = RemoteCommandMode.valueOf(selectedModeName)
     var newCommand by rememberSaveable { mutableStateOf(initialCommand.command ?: "") }
     var newLongPressCommand by rememberSaveable { mutableStateOf(initialCommand.longPressCommand ?: "") }
     var repeatCommand by rememberSaveable { mutableStateOf(initialCommand.repeat) }
@@ -117,7 +112,7 @@ fun EditRemoteCommandDialog(
                     RemoteCommandMode.entries.forEachIndexed { index, mode ->
                         Tab(
                             selected = selectedMode.ordinal == index,
-                            onClick = { selectedModeName = mode.name },
+                            onClick = { selectedMode = mode },
                             text = {
                                 Text(
                                     text = stringResource(
