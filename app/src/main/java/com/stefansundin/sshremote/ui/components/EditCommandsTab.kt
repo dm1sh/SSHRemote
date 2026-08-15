@@ -63,6 +63,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.stefansundin.sshremote.R
@@ -143,7 +144,7 @@ fun EditCommandsTab(
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             IconButton(
@@ -162,10 +163,26 @@ fun EditCommandsTab(
                             ) {
                                 Icon(Icons.Rounded.DragHandle, stringResource(R.string.reorder))
                             }
-                            Text(
-                                text = command.displayText(),
-                                modifier = Modifier.weight(1f),
-                            )
+                            Box(modifier = Modifier.weight(1f)) {
+                                TooltipBox(
+                                    state = rememberTooltipState(),
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Below,
+                                        AppDimens.tooltipAnchorOffset,
+                                    ),
+                                    tooltip = {
+                                        PlainTooltip {
+                                            Text(command.command ?: stringResource(R.string.error))
+                                        }
+                                    },
+                                ) {
+                                    Text(
+                                        command.displayText(),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
                             TooltipBox(
                                 state = rememberTooltipState(),
                                 positionProvider = TooltipDefaults.rememberTooltipPositionProvider(

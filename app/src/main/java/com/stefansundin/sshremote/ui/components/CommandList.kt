@@ -28,9 +28,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -47,9 +53,11 @@ import com.stefansundin.sshremote.data.host.ConnectionStatus
 import com.stefansundin.sshremote.data.host.Host
 import com.stefansundin.sshremote.data.host.IRemoteControlHostViewModel
 import com.stefansundin.sshremote.data.host.RemoteControlKey
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommandList(
     commands: List<Command>,
@@ -92,22 +100,35 @@ fun CommandList(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 commands.forEach { command ->
-                    Button(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            val commandText = command.command ?: return@Button
-                            scope.launch {
-                                hostViewModel.runCommand(
-                                    command = commandText,
-                                    showOutput = command.showOutput,
-                                    renderOutputAsMarkdown = command.renderOutputAsMarkdown,
-                                )
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(command.command ?: stringResource(R.string.error))
                             }
                         },
-                        enabled = connectionStatus == ConnectionStatus.CONNECTED,
-                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(command.displayText())
+                        Button(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                val commandText = command.command ?: return@Button
+                                scope.launch {
+                                    hostViewModel.runCommand(
+                                        command = commandText,
+                                        showOutput = command.showOutput,
+                                        renderOutputAsMarkdown = command.renderOutputAsMarkdown,
+                                    )
+                                }
+                            },
+                            enabled = connectionStatus == ConnectionStatus.CONNECTED,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(command.displayText())
+                        }
                     }
                 }
             }
