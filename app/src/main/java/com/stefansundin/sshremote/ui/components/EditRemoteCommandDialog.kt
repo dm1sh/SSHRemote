@@ -87,6 +87,11 @@ fun EditRemoteCommandDialog(
     var showPhysicalKeyBindingsDialog by rememberSaveable { mutableStateOf(false) }
     val view = LocalView.current
     val canAddToHomeScreen = selectedMode == RemoteCommandMode.TAP && newCommand.isNotBlank()
+    val saveEnabled = if (selectedMode == RemoteCommandMode.PRESS_RELEASE) {
+        newDownCommand.isNotBlank() || newUpCommand.isNotBlank()
+    } else {
+        true
+    }
 
     fun buildCommand() = initialCommand.copy(
         command = if (selectedMode == RemoteCommandMode.TAP) newCommand else null,
@@ -212,6 +217,7 @@ fun EditRemoteCommandDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             Button(
+                enabled = saveEnabled,
                 onClick = {
                     view.playSoundEffect(SoundEffectConstants.CLICK)
                     onSave(key, buildCommand())
