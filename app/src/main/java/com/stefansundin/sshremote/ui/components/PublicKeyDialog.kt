@@ -22,6 +22,7 @@ import android.content.ClipData
 import android.content.Intent
 import android.content.res.Configuration
 import android.view.SoundEffectConstants
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -162,6 +163,7 @@ fun PublicKeyDialog(
                         view.playSoundEffect(SoundEffectConstants.CLICK)
                         val clipData = ClipData.newPlainText(keyLabel, publicKey)
                         scope.launch { clipboard.setClipEntry(clipData.toClipEntry()) }
+                        Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
                     },
                 ) {
                     Icon(

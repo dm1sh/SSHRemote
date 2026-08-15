@@ -23,6 +23,7 @@ import android.content.res.Configuration
 import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.SoundEffectConstants
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.focusable
@@ -314,9 +315,9 @@ fun IdentityListScreen(
                 TextButton(
                     onClick = {
                         view.playSoundEffect(SoundEffectConstants.CLICK)
-                        val clipData =
-                            ClipData.newPlainText(resources.getString(R.string.command_output_label), errorMessage)
+                        val clipData = ClipData.newPlainText(resources.getString(R.string.error), errorMessage)
                         coroutineScope.launch { clipboard.setClipEntry(clipData.toClipEntry()) }
+                        Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
                     },
                 ) {
                     Icon(

@@ -23,6 +23,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import android.view.SoundEffectConstants
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -730,6 +731,7 @@ fun MarkdownText(
     onSearchPositionChanged: ((current: Int, total: Int) -> Unit)? = null,
 ) {
     val clipboard = LocalClipboard.current
+    val context = LocalContext.current
     val density = LocalDensity.current
     val resources = LocalResources.current
     val view = LocalView.current
@@ -916,6 +918,7 @@ fun MarkdownText(
                 view.playSoundEffect(SoundEffectConstants.CLICK)
                 val clipData = ClipData.newPlainText(resources.getString(R.string.link_destination), url)
                 scope.launch { clipboard.setClipEntry(clipData.toClipEntry()) }
+                Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
             },
             onOpenInBrowser = {
                 view.playSoundEffect(SoundEffectConstants.CLICK)

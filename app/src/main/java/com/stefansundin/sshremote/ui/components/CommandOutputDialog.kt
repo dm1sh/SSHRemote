@@ -22,6 +22,7 @@ import android.content.ClipData
 import android.content.Intent
 import android.content.res.Configuration
 import android.view.SoundEffectConstants
+import android.widget.Toast
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -139,6 +140,7 @@ fun CommandOutputDialog(
                                 val clipData =
                                     ClipData.newPlainText(resources.getString(R.string.command_output), output)
                                 scope.launch { clipboard.setClipEntry(clipData.toClipEntry()) }
+                                Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
                             },
                         ) {
                             Icon(
