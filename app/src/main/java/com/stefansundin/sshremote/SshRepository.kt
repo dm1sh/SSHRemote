@@ -30,10 +30,14 @@ import com.stefansundin.sshremote.data.host.HostConnectionDetails
 import com.stefansundin.sshremote.data.settings.SettingsRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -41,6 +45,8 @@ import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
+import java.util.concurrent.CancellationException
+import kotlin.time.Duration.Companion.milliseconds
 
 sealed class Result {
     data class Success(val output: String) : Result()
@@ -205,7 +211,9 @@ class SshRepository(private val settingsRepository: SettingsRepository) : ISshRe
             details.password?.let { newSession.setPassword(it.toByteArray()) }
 
             Log.d("SshRepository", "Connecting to ${details.hostname}")
-            newSession.connect(30000) // 30-second timeout
+            runInterruptible(Dispatchers.IO) {
+                newSession.connect(30000) // 30-second timeout
+            }
 
             return@withContext newSession.hostKey
         }
@@ -260,6 +268,8 @@ class SshRepository(private val settingsRepository: SettingsRepository) : ISshRe
                 val output = StringBuilder()
 
                 while (true) {
+                    currentCoroutineContext().ensureActive()
+
                     // Read stdout
                     while (inputStream.available() > 0) {
                         val i = inputStream.read(buffer, 0, 1024)
@@ -281,7 +291,7 @@ class SshRepository(private val settingsRepository: SettingsRepository) : ISshRe
                             break
                         }
                     }
-                    Thread.sleep(100)
+                    delay(100.milliseconds)
                 }
 
                 val exitStatus = channel.exitStatus
@@ -293,6 +303,9 @@ class SshRepository(private val settingsRepository: SettingsRepository) : ISshRe
                     return@withContext Result.Error("Command failed (Status $exitStatus). Output:\n${output}")
                 }
 
+            } catch (e: CancellationException) {
+                channel?.disconnect()
+                throw e
             } catch (e: Exception) {
                 e.printStackTrace()
                 channel?.disconnect()

@@ -73,6 +73,7 @@ import com.stefansundin.sshremote.ui.dpadFocusable
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -80,6 +81,7 @@ class RouterActivity : ComponentActivity() {
     private val app by lazy { application as SshRemoteApplication }
     private val cryptoManager = CryptoManager()
     private var uiState by mutableStateOf<RouterUiState>(RouterUiState.Idle)
+    private var activeOperationJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -110,6 +112,7 @@ class RouterActivity : ComponentActivity() {
                     onPasswordCanceled = { app.sshRepository.onPasswordPromptComplete(null) },
                     onPassphraseSubmitted = { app.sshRepository.onPassphrasePromptComplete(it) },
                     onPassphraseCanceled = { app.sshRepository.onPassphrasePromptComplete(null) },
+                    onLoadingCanceled = { abortActiveOperation() },
                     onDismissOutput = { finishImmediately() },
                 )
             }
@@ -147,7 +150,7 @@ class RouterActivity : ComponentActivity() {
             return
         }
 
-        lifecycleScope.launch {
+        launchTrackedOperation routerTask@ {
             val host =
                 if (intent.hasExtra(EXTRA_HOST_ID)) {
                     intent.getStringExtra(EXTRA_HOST_ID)?.let { hostId ->
@@ -167,7 +170,7 @@ class RouterActivity : ComponentActivity() {
                 }
             if (host == null) {
                 finishImmediately()
-                return@launch
+                return@routerTask
             }
 
             if (!intent.hasExtra(EXTRA_HOST_ID)) {
@@ -177,7 +180,7 @@ class RouterActivity : ComponentActivity() {
             val commandTemplate = host.resolveShareCommandTemplate()
             if (commandTemplate?.hasTapCommand() != true) {
                 uiState = RouterUiState.MissingShareCommand
-                return@launch
+                return@routerTask
             }
             if (host.shareInBackground) {
                 executeShortcutCommand(
@@ -216,31 +219,51 @@ class RouterActivity : ComponentActivity() {
             return
         }
 
-        lifecycleScope.launch {
+        launchTrackedOperation routerTask@ {
             val host = app.hostRepository.getOnce(hostId)
             if (host == null) {
                 Toast.makeText(this@RouterActivity, R.string.shortcut_host_not_found, Toast.LENGTH_SHORT).show()
                 finishImmediately()
-                return@launch
+                return@routerTask
             }
 
             val commandTemplate = host.commands.find { it.id == commandId }
             if (commandTemplate == null) {
                 Toast.makeText(this@RouterActivity, R.string.shortcut_command_not_found, Toast.LENGTH_SHORT).show()
                 finishImmediately()
-                return@launch
+                return@routerTask
             }
 
             if (!runInBackground) {
                 forwardToMainActivity(intent)
-                return@launch
+                return@routerTask
             }
             executeShortcutCommand(
                 host = host,
                 commandTemplate = commandTemplate,
-                command = commandTemplate.command ?: return@launch,
+                command = commandTemplate.command ?: return@routerTask,
                 loadingTitle = getString(R.string.executing_on, host.name),
             )
+        }
+    }
+
+    private fun launchTrackedOperation(block: suspend () -> Unit) {
+        val job = lifecycleScope.launch {
+            block()
+        }
+        activeOperationJob = job
+        job.invokeOnCompletion {
+            if (activeOperationJob === job) {
+                activeOperationJob = null
+            }
+        }
+    }
+
+    private fun abortActiveOperation() {
+        activeOperationJob?.cancel()
+        lifecycleScope.launch {
+            app.sshRepository.disconnect()
+            finishImmediately()
         }
     }
 
@@ -449,6 +472,7 @@ private fun RouterContent(
     onPasswordCanceled: () -> Unit,
     onPassphraseSubmitted: (String) -> Unit,
     onPassphraseCanceled: () -> Unit,
+    onLoadingCanceled: () -> Unit,
     onDismissOutput: () -> Unit,
 ) {
     message?.let { currentMessage ->
@@ -481,7 +505,11 @@ private fun RouterContent(
     when (uiState) {
         RouterUiState.Idle -> Unit
         RouterUiState.MissingShareCommand -> ShareMissingShareCommandDialog(onDismiss = onDismissOutput)
-        is RouterUiState.Loading -> RouterLoadingDialog(title = uiState.title, statusRes = uiState.statusRes)
+        is RouterUiState.Loading -> RouterLoadingDialog(
+            title = uiState.title,
+            statusRes = uiState.statusRes,
+            onCancel = onLoadingCanceled,
+        )
         is RouterUiState.Output -> {
             CommandOutputDialog(
                 output = uiState.output,
@@ -652,6 +680,7 @@ private fun RouterPassphrasePrompt(
 private fun RouterLoadingDialog(
     title: String,
     @StringRes statusRes: Int,
+    onCancel: () -> Unit,
 ) {
     AlertDialog(
         title = { Text(title) },
@@ -668,9 +697,12 @@ private fun RouterLoadingDialog(
                 )
             }
         },
-        onDismissRequest = {},
-        confirmButton = {},
-        dismissButton = {},
+        onDismissRequest = onCancel,
+        confirmButton = {
+            TextButton(onClick = onCancel) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
         properties = DialogProperties(
             dismissOnBackPress = false,
             dismissOnClickOutside = false,
@@ -733,6 +765,7 @@ private fun RouterContentPreview_Loading() {
                 onPasswordCanceled = {},
                 onPassphraseSubmitted = {},
                 onPassphraseCanceled = {},
+                onLoadingCanceled = {},
                 onDismissOutput = {},
             )
         }
@@ -769,6 +802,7 @@ private fun RouterContentPreview_Output() {
                 onPasswordCanceled = {},
                 onPassphraseSubmitted = {},
                 onPassphraseCanceled = {},
+                onLoadingCanceled = {},
                 onDismissOutput = {},
             )
         }
@@ -804,6 +838,7 @@ private fun RouterContentPreview_Message() {
                 onPasswordCanceled = {},
                 onPassphraseSubmitted = {},
                 onPassphraseCanceled = {},
+                onLoadingCanceled = {},
                 onDismissOutput = {},
             )
         }
@@ -839,6 +874,7 @@ private fun RouterContentPreview_HostKeyVerification() {
                 onPasswordCanceled = {},
                 onPassphraseSubmitted = {},
                 onPassphraseCanceled = {},
+                onLoadingCanceled = {},
                 onDismissOutput = {},
             )
         }
@@ -874,6 +910,7 @@ private fun RouterContentPreview_PasswordPrompt() {
                 onPasswordCanceled = {},
                 onPassphraseSubmitted = {},
                 onPassphraseCanceled = {},
+                onLoadingCanceled = {},
                 onDismissOutput = {},
             )
         }
@@ -909,6 +946,7 @@ private fun RouterContentPreview_PassphrasePrompt() {
                 onPasswordCanceled = {},
                 onPassphraseSubmitted = {},
                 onPassphraseCanceled = {},
+                onLoadingCanceled = {},
                 onDismissOutput = {},
             )
         }
