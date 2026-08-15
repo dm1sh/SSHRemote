@@ -23,6 +23,7 @@ import android.view.HapticFeedbackConstants
 import android.view.SoundEffectConstants
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
@@ -75,6 +76,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -90,6 +92,7 @@ import com.journeyapps.barcodescanner.ScanOptions
 import com.stefansundin.sshremote.R
 import com.stefansundin.sshremote.data.knownhost.IKnownHostViewModel
 import com.stefansundin.sshremote.data.knownhost.KnownHost
+import com.stefansundin.sshremote.ui.HardwareMenuKeyHandler
 import com.stefansundin.sshremote.ui.components.NoWrapOnSpecialCharactersVisualTransformation
 import com.stefansundin.sshremote.ui.components.PublicKeyDialog
 import com.stefansundin.sshremote.ui.components.ScrollbarContainer
@@ -124,6 +127,8 @@ fun KnownHostListScreen(
     var showHostKeyDialog by rememberSaveable { mutableStateOf(false) }
     var hostKeyToShow by rememberSaveable { mutableStateOf("") }
     var undoableDeletedKnownHostLine by rememberSaveable { mutableStateOf<String?>(null) }
+    var focusedKnownHostLine by rememberSaveable { mutableStateOf<String?>(null) }
+    var contextMenuKnownHostLine by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Long pressing the FAB will launch directly into the QR code scanner.
     // It's a secret feature that is not documented.
@@ -209,6 +214,16 @@ fun KnownHostListScreen(
                 showAddDialogScanOnStart = false
             },
         )
+    }
+
+    HardwareMenuKeyHandler {
+        val targetKnownHostLine = focusedKnownHostLine ?: knownHosts.firstOrNull()?.line
+        if (targetKnownHostLine != null) {
+            contextMenuKnownHostLine = targetKnownHostLine
+            true
+        } else {
+            false
+        }
     }
 
     Scaffold(
@@ -301,6 +316,7 @@ fun KnownHostListScreen(
                         items(knownHosts, key = { it.line }) { entry ->
                             KnownHostItem(
                                 entry = entry,
+                                isContextMenuVisible = contextMenuKnownHostLine == entry.line,
                                 onViewHostKey = {
                                     hostKeyToShow = entry.line
                                     showHostKeyDialog = true
@@ -309,6 +325,11 @@ fun KnownHostListScreen(
                                     knownHostViewModel.deleteKnownHost(entry)
                                     undoableDeletedKnownHostLine = entry.line
                                 },
+                                onMenuOpened = { contextMenuKnownHostLine = entry.line },
+                                onMenuDismissed = {
+                                    if (contextMenuKnownHostLine == entry.line) contextMenuKnownHostLine = null
+                                },
+                                onFocused = { focusedKnownHostLine = entry.line },
                             )
                         }
                     }
@@ -321,14 +342,20 @@ fun KnownHostListScreen(
 @Composable
 private fun KnownHostItem(
     entry: KnownHost,
+    isContextMenuVisible: Boolean,
     onViewHostKey: () -> Unit,
     onDelete: () -> Unit,
+    onMenuOpened: () -> Unit,
+    onMenuDismissed: () -> Unit,
+    onFocused: () -> Unit,
 ) {
-    var isContextMenuVisible by rememberSaveable { mutableStateOf(false) }
     val view = LocalView.current
     val formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
 
     ListItem(
+        modifier = Modifier
+            .focusable()
+            .onFocusChanged { if (it.isFocused) onFocused() },
         headlineContent = {
             Text(
                 entry.line,
@@ -344,21 +371,21 @@ private fun KnownHostItem(
                 IconButton(
                     onClick = {
                         view.playSoundEffect(SoundEffectConstants.CLICK)
-                        isContextMenuVisible = true
+                        onMenuOpened()
                     },
                 ) {
                     Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
                 }
                 DropdownMenu(
                     expanded = isContextMenuVisible,
-                    onDismissRequest = { isContextMenuVisible = false },
+                    onDismissRequest = onMenuDismissed,
                 ) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.view_host_key)) },
                         onClick = {
                             view.playSoundEffect(SoundEffectConstants.CLICK)
                             onViewHostKey()
-                            isContextMenuVisible = false
+                            onMenuDismissed()
                         },
                     )
                     DropdownMenuItem(
@@ -366,7 +393,7 @@ private fun KnownHostItem(
                         onClick = {
                             view.playSoundEffect(SoundEffectConstants.CLICK)
                             onDelete()
-                            isContextMenuVisible = false
+                            onMenuDismissed()
                         },
                     )
                 }

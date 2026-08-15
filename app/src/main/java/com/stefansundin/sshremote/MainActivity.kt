@@ -26,6 +26,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import android.view.SoundEffectConstants
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -97,6 +98,7 @@ import com.stefansundin.sshremote.data.knownhost.KnownHostViewModelFactory
 import com.stefansundin.sshremote.data.settings.SettingsViewModel
 import com.stefansundin.sshremote.data.settings.SettingsViewModelFactory
 import com.stefansundin.sshremote.notification.NotificationController
+import com.stefansundin.sshremote.ui.HardwareMenuKeyHandlerHost
 import com.stefansundin.sshremote.ui.screens.AdHocCommandScreen
 import com.stefansundin.sshremote.ui.screens.AddIdentityScreen
 import com.stefansundin.sshremote.ui.screens.EditHostScreen
@@ -172,7 +174,27 @@ private fun NavController.safePopBackStack() {
     }
 }
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), HardwareMenuKeyHandlerHost {
+    private val hardwareMenuKeyHandlers = linkedMapOf<Any, () -> Boolean>()
+
+    override fun registerHardwareMenuKeyHandler(key: Any, handler: () -> Boolean) {
+        hardwareMenuKeyHandlers[key] = handler
+    }
+
+    override fun unregisterHardwareMenuKeyHandler(key: Any) {
+        hardwareMenuKeyHandlers.remove(key)
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_MENU) {
+            val handled = hardwareMenuKeyHandlers.values.lastOrNull()?.invoke() == true
+            if (handled) {
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
     private val cryptoManager = CryptoManager()
 
     private val sshRepository: SshRepository by lazy {

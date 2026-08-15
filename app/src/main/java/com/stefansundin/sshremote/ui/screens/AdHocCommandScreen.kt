@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import com.stefansundin.sshremote.R
 import com.stefansundin.sshremote.data.adhoccommand.AdHocCommand
 import com.stefansundin.sshremote.data.host.RemoteUiState
+import com.stefansundin.sshremote.ui.HardwareMenuKeyHandler
 import com.stefansundin.sshremote.ui.components.CommandOutputDialog
 import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
@@ -107,6 +108,11 @@ fun AdHocCommandScreen(
             output = output,
             onDismiss = onClearCommandOutput,
         )
+    }
+
+    HardwareMenuKeyHandler {
+        showMenu = true
+        true
     }
 
     Scaffold(

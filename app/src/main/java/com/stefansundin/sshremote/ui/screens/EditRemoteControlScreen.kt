@@ -73,6 +73,7 @@ import com.stefansundin.sshremote.data.host.RemoteControlScreen
 import com.stefansundin.sshremote.data.host.SmartVolumeSettings
 import com.stefansundin.sshremote.data.host.presets
 import com.stefansundin.sshremote.data.host.upsertRemoteCommandWithExclusivePhysicalKeys
+import com.stefansundin.sshremote.ui.HardwareMenuKeyHandler
 import com.stefansundin.sshremote.ui.KeyEvent
 import com.stefansundin.sshremote.ui.components.AddCommandShortcutDialog
 import com.stefansundin.sshremote.ui.components.EditCommandDialog
@@ -243,6 +244,11 @@ fun EditRemoteControlScreen(
                 }
             },
         )
+    }
+
+    HardwareMenuKeyHandler {
+        showMenu = true
+        true
     }
 
     Scaffold(

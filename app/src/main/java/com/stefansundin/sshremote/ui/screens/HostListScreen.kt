@@ -69,6 +69,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
@@ -77,6 +78,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.stefansundin.sshremote.R
 import com.stefansundin.sshremote.data.host.Host
+import com.stefansundin.sshremote.ui.HardwareMenuKeyHandler
 import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.components.TextWithInlineIcon
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
@@ -103,6 +105,8 @@ fun HostListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
     var undoableDeletedHostId by rememberSaveable { mutableStateOf<String?>(null) }
+    var focusedHostId by rememberSaveable { mutableStateOf<String?>(null) }
+    var contextMenuHostId by rememberSaveable { mutableStateOf<String?>(null) }
     val view = LocalView.current
 
     // Long pressing the FAB will launch directly into the QR code scanner
@@ -164,6 +168,16 @@ fun HostListScreen(
                 }
             }
             undoableDeletedHostId = null
+        }
+    }
+
+    HardwareMenuKeyHandler {
+        val targetHostId = focusedHostId ?: hosts?.firstOrNull()?.id
+        if (targetHostId != null) {
+            contextMenuHostId = targetHostId
+            true
+        } else {
+            false
         }
     }
 
@@ -268,6 +282,7 @@ fun HostListScreen(
                         items(items = hosts, key = { host -> host.id }) { host ->
                             HostItem(
                                 host = host,
+                                isContextMenuVisible = contextMenuHostId == host.id,
                                 onConnect = {
                                     undoableDeletedHostId = null
                                     onConnectClicked(host)
@@ -288,6 +303,17 @@ fun HostListScreen(
                                     onDelete(host)
                                     undoableDeletedHostId = host.id
                                 },
+                                onMenuOpened = {
+                                    contextMenuHostId = host.id
+                                },
+                                onMenuDismissed = {
+                                    if (contextMenuHostId == host.id) {
+                                        contextMenuHostId = null
+                                    }
+                                },
+                                onFocused = {
+                                    focusedHostId = host.id
+                                },
                             )
                         }
                     }
@@ -300,20 +326,24 @@ fun HostListScreen(
 @Composable
 fun HostItem(
     host: Host,
+    isContextMenuVisible: Boolean,
     onConnect: () -> Unit,
     onEdit: () -> Unit,
     onClone: () -> Unit,
     onCreateShortcut: () -> Unit,
     onDelete: () -> Unit,
+    onMenuOpened: () -> Unit,
+    onMenuDismissed: () -> Unit,
+    onFocused: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var isContextMenuVisible by rememberSaveable { mutableStateOf(false) }
     val view = LocalView.current
 
     Card(
         modifier = modifier
             .padding(vertical = 4.dp)
             .fillMaxWidth()
+            .onFocusChanged { if (it.isFocused) onFocused() }
             .combinedClickable(
                 onClick = {
                     view.playSoundEffect(SoundEffectConstants.CLICK)
@@ -321,7 +351,7 @@ fun HostItem(
                 },
                 onLongClick = {
                     view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                    isContextMenuVisible = true
+                    onMenuOpened()
                 },
             ),
     ) {
@@ -358,7 +388,7 @@ fun HostItem(
                 IconButton(
                     onClick = {
                         view.playSoundEffect(SoundEffectConstants.CLICK)
-                        isContextMenuVisible = true
+                        onMenuOpened()
                     },
                 ) {
                     Icon(
@@ -369,14 +399,14 @@ fun HostItem(
 
                 DropdownMenu(
                     expanded = isContextMenuVisible,
-                    onDismissRequest = { isContextMenuVisible = false },
+                    onDismissRequest = onMenuDismissed,
                 ) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.edit)) },
                         onClick = {
                             view.playSoundEffect(SoundEffectConstants.CLICK)
                             onEdit()
-                            isContextMenuVisible = false
+                            onMenuDismissed()
                         },
                     )
                     DropdownMenuItem(
@@ -384,7 +414,7 @@ fun HostItem(
                         onClick = {
                             view.playSoundEffect(SoundEffectConstants.CLICK)
                             onClone()
-                            isContextMenuVisible = false
+                            onMenuDismissed()
                         },
                     )
                     DropdownMenuItem(
@@ -392,7 +422,7 @@ fun HostItem(
                         onClick = {
                             view.playSoundEffect(SoundEffectConstants.CLICK)
                             onCreateShortcut()
-                            isContextMenuVisible = false
+                            onMenuDismissed()
                         },
                     )
                     DropdownMenuItem(
@@ -400,7 +430,7 @@ fun HostItem(
                         onClick = {
                             view.playSoundEffect(SoundEffectConstants.CLICK)
                             onDelete()
-                            isContextMenuVisible = false
+                            onMenuDismissed()
                         },
                     )
                 }

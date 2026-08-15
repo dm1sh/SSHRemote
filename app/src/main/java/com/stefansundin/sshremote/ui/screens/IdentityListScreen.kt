@@ -25,6 +25,7 @@ import android.view.HapticFeedbackConstants
 import android.view.SoundEffectConstants
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
@@ -86,6 +87,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -107,6 +109,7 @@ import com.stefansundin.sshremote.data.ICryptoManager
 import com.stefansundin.sshremote.data.identity.IIdentityListViewModel
 import com.stefansundin.sshremote.data.identity.Identity
 import com.stefansundin.sshremote.data.identity.IdentityEvent
+import com.stefansundin.sshremote.ui.HardwareMenuKeyHandler
 import com.stefansundin.sshremote.ui.components.NoWrapOnSpecialCharactersVisualTransformation
 import com.stefansundin.sshremote.ui.components.PublicKeyDialog
 import com.stefansundin.sshremote.ui.components.ScrollbarContainer
@@ -147,6 +150,8 @@ fun IdentityListScreen(
     var undoableDeletedIdentityId by rememberSaveable { mutableStateOf<String?>(null) }
     var scrollToTopOnNextUpdate by rememberSaveable { mutableStateOf(false) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var focusedIdentityId by rememberSaveable { mutableStateOf<String?>(null) }
+    var contextMenuIdentityId by rememberSaveable { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
@@ -257,6 +262,16 @@ fun IdentityListScreen(
                     scrollToTopOnNextUpdate = true
                 }
             }
+        }
+    }
+
+    HardwareMenuKeyHandler {
+        val targetIdentityId = focusedIdentityId ?: identities?.firstOrNull()?.id
+        if (targetIdentityId != null) {
+            contextMenuIdentityId = targetIdentityId
+            true
+        } else {
+            false
         }
     }
 
@@ -383,6 +398,7 @@ fun IdentityListScreen(
                             IdentityItem(
                                 identity = identity,
                                 cryptoManager = cryptoManager,
+                                isContextMenuVisible = contextMenuIdentityId == identity.id,
                                 onShowPublicKey = { identityViewModel.showPublicKeyFor(identity) },
                                 onExportPublicKey = { identityViewModel.exportPublicKeyFor(identity) },
                                 onDelete = {
@@ -392,6 +408,11 @@ fun IdentityListScreen(
                                 onRename = { newName -> onRename(identity, newName) },
                                 onAttachCertificate = { cert -> onAttachCertificate(identity, cert) },
                                 onDeleteCertificate = { onDeleteCertificate(identity) },
+                                onMenuOpened = { contextMenuIdentityId = identity.id },
+                                onMenuDismissed = {
+                                    if (contextMenuIdentityId == identity.id) contextMenuIdentityId = null
+                                },
+                                onFocused = { focusedIdentityId = identity.id },
                             )
                         }
                     }
@@ -405,15 +426,18 @@ fun IdentityListScreen(
 fun IdentityItem(
     identity: Identity,
     cryptoManager: ICryptoManager,
+    isContextMenuVisible: Boolean,
     onShowPublicKey: () -> Unit,
     onExportPublicKey: () -> Unit,
     onDelete: () -> Unit,
     onRename: (String) -> Unit,
     onAttachCertificate: (String) -> Unit,
     onDeleteCertificate: () -> Unit,
+    onMenuOpened: () -> Unit,
+    onMenuDismissed: () -> Unit,
+    onFocused: () -> Unit,
 ) {
     val hasCertificate = identity.encryptedCertificate != null
-    var isContextMenuVisible by rememberSaveable { mutableStateOf(false) }
     var isRenameDialogVisible by rememberSaveable { mutableStateOf(false) }
     var newName by rememberSaveable { mutableStateOf(identity.name) }
     var showReplaceCertWarning by rememberSaveable { mutableStateOf(false) }
@@ -459,6 +483,9 @@ fun IdentityItem(
     }
 
     ListItem(
+        modifier = Modifier
+            .focusable()
+            .onFocusChanged { if (it.isFocused) onFocused() },
         headlineContent = {
             Row(verticalAlignment = Alignment.Top) {
                 Text(
@@ -491,28 +518,28 @@ fun IdentityItem(
                 IconButton(
                     onClick = {
                         view.playSoundEffect(SoundEffectConstants.CLICK)
-                        isContextMenuVisible = true
+                        onMenuOpened()
                     },
                 ) {
                     Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
                 }
                 DropdownMenu(
                     expanded = isContextMenuVisible,
-                    onDismissRequest = { isContextMenuVisible = false },
+                    onDismissRequest = onMenuDismissed,
                 ) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.rename)) },
                         onClick = {
                             view.playSoundEffect(SoundEffectConstants.CLICK)
                             isRenameDialogVisible = true
-                            isContextMenuVisible = false
+                            onMenuDismissed()
                         },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.attach_certificate)) },
                         onClick = {
                             view.playSoundEffect(SoundEffectConstants.CLICK)
-                            isContextMenuVisible = false
+                            onMenuDismissed()
                             if (hasCertificate) {
                                 showReplaceCertWarning = true
                             } else {
@@ -526,7 +553,7 @@ fun IdentityItem(
                         onClick = {
                             view.playSoundEffect(SoundEffectConstants.CLICK)
                             onShowPublicKey()
-                            isContextMenuVisible = false
+                            onMenuDismissed()
                         },
                     )
                     DropdownMenuItem(
@@ -534,7 +561,7 @@ fun IdentityItem(
                         onClick = {
                             view.playSoundEffect(SoundEffectConstants.CLICK)
                             onExportPublicKey()
-                            isContextMenuVisible = false
+                            onMenuDismissed()
                         },
                     )
                     DropdownMenuItem(
@@ -542,7 +569,7 @@ fun IdentityItem(
                         onClick = {
                             view.playSoundEffect(SoundEffectConstants.CLICK)
                             onDelete()
-                            isContextMenuVisible = false
+                            onMenuDismissed()
                         },
                     )
                 }

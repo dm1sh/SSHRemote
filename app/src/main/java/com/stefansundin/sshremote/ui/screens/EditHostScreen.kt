@@ -103,6 +103,7 @@ import com.stefansundin.sshremote.data.identity.Identity
 import com.stefansundin.sshremote.data.settings.ExportedCommand
 import com.stefansundin.sshremote.data.settings.ExportedHost
 import com.stefansundin.sshremote.data.settings.ISettingsViewModel
+import com.stefansundin.sshremote.ui.HardwareMenuKeyHandler
 import com.stefansundin.sshremote.ui.components.QrCodeDialog
 import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.dpadFocusable
@@ -226,6 +227,7 @@ fun EditHostScreen(
             (sshConfig != host?.sshConfig)
 
     var showSaveDialog by rememberSaveable { mutableStateOf(false) }
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
     val view = LocalView.current
 
     val nameRequester = remember { BringIntoViewRequester() }
@@ -533,6 +535,11 @@ fun EditHostScreen(
         showSaveDialog = true
     }
 
+    HardwareMenuKeyHandler {
+        menuExpanded = true
+        true
+    }
+
     val title = stringResource(if (host == null) R.string.add_host_title else R.string.edit_host_title)
 
     Scaffold(
@@ -558,7 +565,6 @@ fun EditHostScreen(
                     }
                 },
                 actions = {
-                    var menuExpanded by rememberSaveable { mutableStateOf(false) }
                     IconButton(
                         onClick = {
                             view.playSoundEffect(SoundEffectConstants.CLICK)

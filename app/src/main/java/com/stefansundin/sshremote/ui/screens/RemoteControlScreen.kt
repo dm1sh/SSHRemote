@@ -123,6 +123,7 @@ import com.stefansundin.sshremote.data.settings.ISettingsViewModel
 import com.stefansundin.sshremote.notification.NotificationController
 import com.stefansundin.sshremote.notification.toNotificationHost
 import com.stefansundin.sshremote.performHapticFeedback
+import com.stefansundin.sshremote.ui.HardwareMenuKeyHandler
 import com.stefansundin.sshremote.ui.KeyEvent
 import com.stefansundin.sshremote.ui.MouseEvent
 import com.stefansundin.sshremote.ui.components.CommandList
@@ -780,6 +781,11 @@ fun RemoteControlScreen(
         onDispose {
             clearActivePhysicalKeys(sendReleaseEvents = false)
         }
+    }
+
+    HardwareMenuKeyHandler {
+        showMenu = true
+        true
     }
 
     BoxWithConstraints(
