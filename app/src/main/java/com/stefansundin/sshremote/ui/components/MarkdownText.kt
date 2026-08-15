@@ -33,12 +33,10 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -817,16 +815,14 @@ fun MarkdownText(
         val blockHeights = remember(blocks) { IntArray(blocks.size) }
         var layoutVersion by remember(blocks) { mutableIntStateOf(0) }
         var viewportHeightPx by remember { mutableIntStateOf(0) }
-        val imeBottomPx = WindowInsets.ime.getBottom(density)
 
         fun scrollToCurrentMatch(topLevelBlockIndex: Int) {
             if (topLevelBlockIndex !in blockPositions.indices) return
             val blockTop = blockPositions[topLevelBlockIndex]
             val blockHeight = blockHeights[topLevelBlockIndex]
-            val visibleViewportPx = (viewportHeightPx - imeBottomPx).coerceAtLeast(1)
-            if (visibleViewportPx <= 0 || blockHeight <= 0) return
+            if (viewportHeightPx <= 0 || blockHeight <= 0) return
 
-            val centeredTarget = (blockTop - ((visibleViewportPx - blockHeight) / 2f)).roundToInt()
+            val centeredTarget = (blockTop - ((viewportHeightPx - blockHeight) / 2f)).roundToInt()
                 .coerceIn(0, verticalScrollState.maxValue)
             if (verticalScrollState.value != centeredTarget) {
                 // Keep behavior close to browser find by centering the matched section when possible.
