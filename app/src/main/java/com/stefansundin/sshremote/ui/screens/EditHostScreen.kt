@@ -710,7 +710,7 @@ fun EditHostScreen(
                 var userDropdownExpanded by rememberSaveable { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
                     expanded = userDropdownExpanded,
-                    onExpandedChange = { userDropdownExpanded = !userDropdownExpanded },
+                    onExpandedChange = { userDropdownExpanded = it },
                 ) {
                     OutlinedTextField(
                         value = user,
@@ -730,7 +730,11 @@ fun EditHostScreen(
                             imeAction = ImeAction.Next,
                         ),
                         trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = userDropdownExpanded)
+                            IconButton(onClick = {
+                                // Intentionally left empty.
+                            }) {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = userDropdownExpanded)
+                            }
                         },
                     )
 
