@@ -39,12 +39,18 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -70,6 +76,7 @@ import com.stefansundin.sshremote.data.host.toConnectionDetails
 import com.stefansundin.sshremote.ui.components.CommandOutputDialog
 import com.stefansundin.sshremote.ui.components.SelectHostDialog
 import com.stefansundin.sshremote.ui.dpadFocusable
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -150,7 +157,7 @@ class RouterActivity : ComponentActivity() {
             return
         }
 
-        launchTrackedOperation routerTask@ {
+        launchTrackedOperation routerTask@{
             val host =
                 if (intent.hasExtra(EXTRA_HOST_ID)) {
                     intent.getStringExtra(EXTRA_HOST_ID)?.let { hostId ->
@@ -219,7 +226,7 @@ class RouterActivity : ComponentActivity() {
             return
         }
 
-        launchTrackedOperation routerTask@ {
+        launchTrackedOperation routerTask@{
             val host = app.hostRepository.getOnce(hostId)
             if (host == null) {
                 Toast.makeText(this@RouterActivity, R.string.shortcut_host_not_found, Toast.LENGTH_SHORT).show()
@@ -510,6 +517,7 @@ private fun RouterContent(
             statusRes = uiState.statusRes,
             onCancel = onLoadingCanceled,
         )
+
         is RouterUiState.Output -> {
             CommandOutputDialog(
                 output = uiState.output,
@@ -586,6 +594,7 @@ private fun RouterHostKeyVerificationDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RouterPasswordPrompt(
     prompt: PasswordPrompt,
@@ -607,11 +616,25 @@ private fun RouterPasswordPrompt(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
                 trailingIcon = {
-                    val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                    val icon = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                     val description =
                         stringResource(if (passwordVisible) R.string.hide_password else R.string.show_password)
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(imageVector = image, contentDescription = description)
+
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(description)
+                            }
+                        },
+                    ) {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(icon, description)
+                        }
                     }
                 },
             )
@@ -631,6 +654,7 @@ private fun RouterPasswordPrompt(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RouterPassphrasePrompt(
     prompt: PassphrasePrompt,
@@ -652,11 +676,25 @@ private fun RouterPassphrasePrompt(
                 visualTransformation = if (passphraseVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
                 trailingIcon = {
-                    val image = if (passphraseVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                    val icon = if (passphraseVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                     val description =
                         stringResource(if (passphraseVisible) R.string.hide_passphrase else R.string.show_passphrase)
-                    IconButton(onClick = { passphraseVisible = !passphraseVisible }) {
-                        Icon(imageVector = image, contentDescription = description)
+
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(description)
+                            }
+                        },
+                    ) {
+                        IconButton(onClick = { passphraseVisible = !passphraseVisible }) {
+                            Icon(icon, description)
+                        }
                     }
                 },
             )

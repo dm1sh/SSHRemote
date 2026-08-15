@@ -45,11 +45,16 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -86,6 +91,7 @@ import com.stefansundin.sshremote.ui.components.RemoteControl
 import com.stefansundin.sshremote.ui.components.ResponsiveTabRow
 import com.stefansundin.sshremote.ui.components.ShareTargetSettingsDialog
 import com.stefansundin.sshremote.ui.components.SmartVolumeSettingsDialog
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.launch
 
@@ -256,31 +262,54 @@ fun EditRemoteControlScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.edit_remote_control), maxLines = 1) },
                 navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            if (hasUnsavedChanges) {
-                                showUnsavedBackDialog = true
-                            } else {
-                                onNavigateBack(pagerState.currentPage)
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(stringResource(R.string.go_back))
                             }
                         },
                     ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.navigate_back),
-                        )
+                        IconButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                if (hasUnsavedChanges) {
+                                    showUnsavedBackDialog = true
+                                } else {
+                                    onNavigateBack(pagerState.currentPage)
+                                }
+                            },
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.go_back))
+                        }
                     }
                 },
                 actions = {
                     Box {
-                        IconButton(
-                            onClick = {
-                                view.playSoundEffect(SoundEffectConstants.CLICK)
-                                showMenu = true
+                        TooltipBox(
+                            state = rememberTooltipState(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Below,
+                                AppDimens.tooltipAnchorOffset,
+                            ),
+                            tooltip = {
+                                PlainTooltip {
+                                    Text(stringResource(R.string.more_options))
+                                }
                             },
                         ) {
-                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
+                            IconButton(
+                                onClick = {
+                                    view.playSoundEffect(SoundEffectConstants.CLICK)
+                                    showMenu = true
+                                },
+                            ) {
+                                Icon(Icons.Default.MoreVert, stringResource(R.string.more_options))
+                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -341,12 +370,12 @@ fun EditRemoteControlScreen(
                             showEditCommandDialog = true
                         },
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_command))
+                        Icon(Icons.Default.Add, stringResource(R.string.add_command))
                     }
                 }
                 ExtendedFloatingActionButton(
                     text = { Text(stringResource(R.string.save)) },
-                    icon = { Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save)) },
+                    icon = { Icon(Icons.Default.Save, stringResource(R.string.save)) },
                     onClick = {
                         view.playSoundEffect(SoundEffectConstants.CLICK)
                         onSave(

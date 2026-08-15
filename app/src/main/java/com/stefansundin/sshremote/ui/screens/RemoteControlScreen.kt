@@ -58,6 +58,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -65,7 +66,11 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -136,6 +141,7 @@ import com.stefansundin.sshremote.ui.components.ResponsiveTabRow
 import com.stefansundin.sshremote.ui.components.SelectIdentityDialog
 import com.stefansundin.sshremote.ui.components.SpecialKeysRow
 import com.stefansundin.sshremote.ui.dpadFocusable
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -396,16 +402,30 @@ fun RemoteControlScreen(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { sshRepository.onPasswordPromptComplete(password) }),
                     trailingIcon = {
-                        val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                        val icon = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                         val description =
                             stringResource(if (passwordVisible) R.string.hide_password else R.string.show_password)
-                        IconButton(
-                            onClick = {
-                                view.playSoundEffect(SoundEffectConstants.CLICK)
-                                passwordVisible = !passwordVisible
+
+                        TooltipBox(
+                            state = rememberTooltipState(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Below,
+                                AppDimens.tooltipAnchorOffset,
+                            ),
+                            tooltip = {
+                                PlainTooltip {
+                                    Text(description)
+                                }
                             },
                         ) {
-                            Icon(imageVector = image, contentDescription = description)
+                            IconButton(
+                                onClick = {
+                                    view.playSoundEffect(SoundEffectConstants.CLICK)
+                                    passwordVisible = !passwordVisible
+                                },
+                            ) {
+                                Icon(icon, description)
+                            }
                         }
                     },
                 )
@@ -453,16 +473,30 @@ fun RemoteControlScreen(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { sshRepository.onPassphrasePromptComplete(passphrase) }),
                     trailingIcon = {
-                        val image = if (passphraseVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                        val icon = if (passphraseVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                         val description =
                             stringResource(if (passphraseVisible) R.string.hide_passphrase else R.string.show_passphrase)
-                        IconButton(
-                            onClick = {
-                                view.playSoundEffect(SoundEffectConstants.CLICK)
-                                passphraseVisible = !passphraseVisible
+
+                        TooltipBox(
+                            state = rememberTooltipState(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Below,
+                                AppDimens.tooltipAnchorOffset,
+                            ),
+                            tooltip = {
+                                PlainTooltip {
+                                    Text(description)
+                                }
                             },
                         ) {
-                            Icon(imageVector = image, contentDescription = description)
+                            IconButton(
+                                onClick = {
+                                    view.playSoundEffect(SoundEffectConstants.CLICK)
+                                    passphraseVisible = !passphraseVisible
+                                },
+                            ) {
+                                Icon(icon, description)
+                            }
                         }
                     },
                 )
@@ -821,16 +855,26 @@ fun RemoteControlScreen(
                     TopAppBar(
                         title = { Text(host.name, maxLines = 1) },
                         navigationIcon = {
-                            IconButton(
-                                onClick = {
-                                    view.playSoundEffect(SoundEffectConstants.CLICK)
-                                    disconnectFromRemote()
+                            TooltipBox(
+                                state = rememberTooltipState(),
+                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                    TooltipAnchorPosition.Below,
+                                    AppDimens.tooltipAnchorOffset,
+                                ),
+                                tooltip = {
+                                    PlainTooltip {
+                                        Text(stringResource(R.string.disconnect))
+                                    }
                                 },
                             ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(R.string.disconnect),
-                                )
+                                IconButton(
+                                    onClick = {
+                                        view.playSoundEffect(SoundEffectConstants.CLICK)
+                                        disconnectFromRemote()
+                                    },
+                                ) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.disconnect))
+                                }
                             }
                         },
                         actions = {
@@ -841,30 +885,70 @@ fun RemoteControlScreen(
                                         .size(24.dp),
                                 )
                             }
-                            ConnectionStatusIndicator(
-                                connectionStatus = uiState.connectionStatus,
-                                modifier = Modifier.padding(end = 8.dp),
-                            )
+                            TooltipBox(
+                                state = rememberTooltipState(),
+                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                    TooltipAnchorPosition.Below,
+                                    AppDimens.tooltipAnchorOffset,
+                                ),
+                                tooltip = {
+                                    PlainTooltip {
+                                        Text(stringResource(uiState.connectionStatus.labelRes))
+                                    }
+                                },
+                            ) {
+                                ConnectionStatusIndicator(
+                                    connectionStatus = uiState.connectionStatus,
+                                    modifier = Modifier.padding(end = 8.dp),
+                                )
+                            }
                             if (canToggleFullscreen) {
+                                val icon = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen
+                                val description =
+                                    stringResource(if (isFullscreen) R.string.exit_fullscreen else R.string.fullscreen)
+
+                                TooltipBox(
+                                    state = rememberTooltipState(),
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Below,
+                                        AppDimens.tooltipAnchorOffset,
+                                    ),
+                                    tooltip = {
+                                        PlainTooltip {
+                                            Text(description)
+                                        }
+                                    },
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            view.playSoundEffect(SoundEffectConstants.CLICK)
+                                            isFullscreen = !isFullscreen
+                                        },
+                                    ) {
+                                        Icon(icon, description)
+                                    }
+                                }
+                            }
+                            TooltipBox(
+                                state = rememberTooltipState(),
+                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                    TooltipAnchorPosition.Below,
+                                    AppDimens.tooltipAnchorOffset,
+                                ),
+                                tooltip = {
+                                    PlainTooltip {
+                                        Text(stringResource(R.string.more_options))
+                                    }
+                                },
+                            ) {
                                 IconButton(
                                     onClick = {
                                         view.playSoundEffect(SoundEffectConstants.CLICK)
-                                        isFullscreen = !isFullscreen
+                                        showMenu = !showMenu
                                     },
                                 ) {
-                                    Icon(
-                                        if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                                        contentDescription = stringResource(if (isFullscreen) R.string.exit_fullscreen else R.string.fullscreen),
-                                    )
+                                    Icon(Icons.Default.MoreVert, stringResource(R.string.more_options))
                                 }
-                            }
-                            IconButton(
-                                onClick = {
-                                    view.playSoundEffect(SoundEffectConstants.CLICK)
-                                    showMenu = !showMenu
-                                },
-                            ) {
-                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
                             }
                             DropdownMenu(
                                 expanded = showMenu,

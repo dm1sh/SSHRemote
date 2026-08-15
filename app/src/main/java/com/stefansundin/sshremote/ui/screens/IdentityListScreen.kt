@@ -66,6 +66,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -74,7 +75,11 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -115,6 +120,7 @@ import com.stefansundin.sshremote.ui.components.PublicKeyDialog
 import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.components.TextWithInlineIcon
 import com.stefansundin.sshremote.ui.dpadFocusable
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -315,7 +321,7 @@ fun IdentityListScreen(
                 ) {
                     Icon(
                         Icons.Outlined.ContentCopy,
-                        contentDescription = stringResource(R.string.copy),
+                        stringResource(R.string.copy),
                         modifier = Modifier.size(ButtonDefaults.IconSize),
                     )
                     Spacer(Modifier.size(ButtonDefaults.IconSpacing))
@@ -331,16 +337,26 @@ fun IdentityListScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.ssh_keys)) },
                 navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            onNavigateUp()
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(stringResource(R.string.go_back))
+                            }
                         },
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.navigate_back),
-                        )
+                        IconButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                onNavigateUp()
+                            },
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.go_back))
+                        }
                     }
                 },
             )
@@ -350,7 +366,7 @@ fun IdentityListScreen(
                 onClick = {},
                 interactionSource = interactionSource,
             ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_ssh_key))
+                Icon(Icons.Default.Add, stringResource(R.string.add_ssh_key))
             }
         },
     ) { innerPadding ->
@@ -422,6 +438,7 @@ fun IdentityListScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IdentityItem(
     identity: Identity,
@@ -494,16 +511,16 @@ fun IdentityItem(
                 )
                 if (isEncrypted) {
                     Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = stringResource(R.string.passphrase_protected),
+                        Icons.Default.Lock,
+                        stringResource(R.string.passphrase_protected),
                         modifier = Modifier.padding(start = 8.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 if (hasCertificate) {
                     Icon(
-                        imageVector = Icons.Default.Attachment,
-                        contentDescription = stringResource(R.string.certificate_attached),
+                        Icons.Default.Attachment,
+                        stringResource(R.string.certificate_attached),
                         modifier = Modifier.padding(start = 8.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -515,13 +532,26 @@ fun IdentityItem(
         },
         trailingContent = {
             Box {
-                IconButton(
-                    onClick = {
-                        view.playSoundEffect(SoundEffectConstants.CLICK)
-                        onMenuOpened()
+                TooltipBox(
+                    state = rememberTooltipState(),
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Start,
+                        AppDimens.tooltipAnchorOffset,
+                    ),
+                    tooltip = {
+                        PlainTooltip {
+                            Text(stringResource(R.string.more_options))
+                        }
                     },
                 ) {
-                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
+                    IconButton(
+                        onClick = {
+                            view.playSoundEffect(SoundEffectConstants.CLICK)
+                            onMenuOpened()
+                        },
+                    ) {
+                        Icon(Icons.Default.MoreVert, stringResource(R.string.more_options))
+                    }
                 }
                 DropdownMenu(
                     expanded = isContextMenuVisible,

@@ -57,10 +57,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -108,6 +113,7 @@ import com.stefansundin.sshremote.ui.components.QrCodeDialog
 import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.dpadFocusable
 import com.stefansundin.sshremote.ui.portraitImePadding
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.launch
 import java.io.ByteArrayInputStream
@@ -548,33 +554,53 @@ fun EditHostScreen(
             TopAppBar(
                 title = { Text(title) },
                 navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            if (hasUnsavedChanges) {
-                                showSaveDialog = true
-                            } else {
-                                onNavigateUp()
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(stringResource(R.string.go_back))
                             }
                         },
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.cancel),
-                        )
+                        IconButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                if (hasUnsavedChanges) {
+                                    showSaveDialog = true
+                                } else {
+                                    onNavigateUp()
+                                }
+                            },
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.go_back))
+                        }
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            menuExpanded = true
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(stringResource(R.string.more_options))
+                            }
                         },
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.more_options),
-                        )
+                        IconButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                menuExpanded = true
+                            },
+                        ) {
+                            Icon(Icons.Default.MoreVert, stringResource(R.string.more_options))
+                        }
                     }
                     DropdownMenu(
                         expanded = menuExpanded,
@@ -621,10 +647,7 @@ fun EditHostScreen(
                     handleSave()
                 },
             ) {
-                Icon(
-                    imageVector = Icons.Default.Save,
-                    contentDescription = stringResource(R.string.save),
-                )
+                Icon(Icons.Default.Save, stringResource(R.string.save))
             }
         },
     ) { innerPadding ->
@@ -730,9 +753,11 @@ fun EditHostScreen(
                             imeAction = ImeAction.Next,
                         ),
                         trailingIcon = {
-                            IconButton(onClick = {
-                                // Intentionally left empty.
-                            }) {
+                            IconButton(
+                                onClick = {
+                                    // Intentionally left empty.
+                                },
+                            ) {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = userDropdownExpanded)
                             }
                         },
@@ -789,18 +814,31 @@ fun EditHostScreen(
                             imeAction = ImeAction.Done,
                         ),
                         trailingIcon = {
-                            val image =
-                                if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                            val icon = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                             val description =
                                 stringResource(if (passwordVisible) R.string.hide_password else R.string.show_password)
-                            IconToggleButton(
-                                checked = passwordVisible,
-                                onCheckedChange = {
-                                    view.playSoundEffect(SoundEffectConstants.CLICK)
-                                    passwordVisible = it
+
+                            TooltipBox(
+                                state = rememberTooltipState(),
+                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                    TooltipAnchorPosition.Start,
+                                    AppDimens.tooltipAnchorOffset,
+                                ),
+                                tooltip = {
+                                    PlainTooltip {
+                                        Text(description)
+                                    }
                                 },
                             ) {
-                                Icon(imageVector = image, contentDescription = description)
+                                IconToggleButton(
+                                    checked = passwordVisible,
+                                    onCheckedChange = {
+                                        view.playSoundEffect(SoundEffectConstants.CLICK)
+                                        passwordVisible = it
+                                    },
+                                ) {
+                                    Icon(icon, description)
+                                }
                             }
                         },
                     )

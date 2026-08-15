@@ -229,8 +229,8 @@ private fun RepeatingButtonPreview_Icon() {
                 onClick = {},
                 modifier = Modifier.size(width = 120.dp, height = 56.dp),
             ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = "Play/Pause")
-                Icon(Icons.Default.Pause, contentDescription = "Play/Pause")
+                Icon(Icons.Default.PlayArrow, "Play/Pause")
+                Icon(Icons.Default.Pause, "Play/Pause")
             }
         }
     }

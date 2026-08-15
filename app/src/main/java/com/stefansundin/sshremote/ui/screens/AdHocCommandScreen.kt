@@ -46,10 +46,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,6 +80,7 @@ import com.stefansundin.sshremote.data.host.RemoteUiState
 import com.stefansundin.sshremote.ui.HardwareMenuKeyHandler
 import com.stefansundin.sshremote.ui.components.CommandOutputDialog
 import com.stefansundin.sshremote.ui.components.ScrollbarContainer
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,27 +126,50 @@ fun AdHocCommandScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.ad_hoc_command_title)) },
                 navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            onNavigateUp()
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(stringResource(R.string.go_back))
+                            }
                         },
                     ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.key_back),
-                        )
+                        IconButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                onNavigateUp()
+                            },
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.go_back))
+                        }
                     }
                 },
                 actions = {
                     Box {
-                        IconButton(
-                            onClick = {
-                                view.playSoundEffect(SoundEffectConstants.CLICK)
-                                showMenu = true
+                        TooltipBox(
+                            state = rememberTooltipState(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Below,
+                                AppDimens.tooltipAnchorOffset,
+                            ),
+                            tooltip = {
+                                PlainTooltip {
+                                    Text(stringResource(R.string.more_options))
+                                }
                             },
                         ) {
-                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
+                            IconButton(
+                                onClick = {
+                                    view.playSoundEffect(SoundEffectConstants.CLICK)
+                                    showMenu = true
+                                },
+                            ) {
+                                Icon(Icons.Default.MoreVert, stringResource(R.string.more_options))
+                            }
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -260,7 +289,7 @@ fun AdHocCommandScreen(
                 )
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
-                    contentDescription = stringResource(R.string.execute),
+                    stringResource(R.string.execute),
                     modifier = Modifier.combinedClickable(
                         onClick = executeAndStay,
                         onLongClick = executeAndGoBack,

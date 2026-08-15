@@ -35,14 +35,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,10 +67,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.stefansundin.sshremote.R
 import com.stefansundin.sshremote.data.host.Command
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditCommandsTab(
     commands: List<Command>,
@@ -152,37 +160,63 @@ fun EditCommandsTab(
                                     .clearAndSetSemantics { },
                                 onClick = {},
                             ) {
-                                Icon(Icons.Rounded.DragHandle, contentDescription = stringResource(R.string.reorder))
+                                Icon(Icons.Rounded.DragHandle, stringResource(R.string.reorder))
                             }
                             Text(
                                 text = command.displayText(),
                                 modifier = Modifier.weight(1f),
                             )
-                            IconButton(
-                                onClick = {
-                                    view.playSoundEffect(SoundEffectConstants.CLICK)
-                                    onEditCommand(command)
-                                },
-                            ) {
-                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit))
-                            }
-                            IconButton(
-                                onClick = {
-                                    view.playSoundEffect(SoundEffectConstants.CLICK)
-                                    val deletedCommandIndex = commands.indexOfFirst { it.id == command.id }
-                                    if (deletedCommandIndex >= 0) {
-                                        val newCommands =
-                                            commands.toMutableList().apply { removeAt(deletedCommandIndex) }
-                                        onCommandsChanged(newCommands)
-                                        undoableDeletedCommand = deletedCommandIndex to command
+                            TooltipBox(
+                                state = rememberTooltipState(),
+                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                    TooltipAnchorPosition.Below,
+                                    AppDimens.tooltipAnchorOffset,
+                                ),
+                                tooltip = {
+                                    PlainTooltip {
+                                        Text(stringResource(R.string.edit))
                                     }
                                 },
                             ) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = stringResource(R.string.delete),
-                                    tint = MaterialTheme.colorScheme.error,
-                                )
+                                IconButton(
+                                    onClick = {
+                                        view.playSoundEffect(SoundEffectConstants.CLICK)
+                                        onEditCommand(command)
+                                    },
+                                ) {
+                                    Icon(Icons.Default.Edit, stringResource(R.string.edit))
+                                }
+                            }
+                            TooltipBox(
+                                state = rememberTooltipState(),
+                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                    TooltipAnchorPosition.Below,
+                                    AppDimens.tooltipAnchorOffset,
+                                ),
+                                tooltip = {
+                                    PlainTooltip {
+                                        Text(stringResource(R.string.delete))
+                                    }
+                                },
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        view.playSoundEffect(SoundEffectConstants.CLICK)
+                                        val deletedCommandIndex = commands.indexOfFirst { it.id == command.id }
+                                        if (deletedCommandIndex >= 0) {
+                                            val newCommands =
+                                                commands.toMutableList().apply { removeAt(deletedCommandIndex) }
+                                            onCommandsChanged(newCommands)
+                                            undoableDeletedCommand = deletedCommandIndex to command
+                                        }
+                                    },
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        stringResource(R.string.delete),
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                }
                             }
                         }
                     }

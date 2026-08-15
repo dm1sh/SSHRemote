@@ -79,8 +79,8 @@ fun TextWithInlineIcon(
             ),
         ) {
             Icon(
-                imageVector = icon,
-                contentDescription = iconContentDescription,
+                icon,
+                iconContentDescription,
                 modifier = Modifier.fillMaxSize(),
             )
         },

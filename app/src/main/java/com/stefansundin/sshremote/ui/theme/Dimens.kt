@@ -16,13 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.stefansundin.sshremote.data.host
+package com.stefansundin.sshremote.ui.theme
 
-import androidx.annotation.StringRes
-import com.stefansundin.sshremote.R
+import androidx.compose.ui.unit.dp
 
-enum class ConnectionStatus(@StringRes val labelRes: Int) {
-    CONNECTED(R.string.connected),
-    CONNECTING(R.string.connecting),
-    DISCONNECTED(R.string.disconnected),
+object AppDimens {
+    val tooltipAnchorOffset = 30.dp
 }

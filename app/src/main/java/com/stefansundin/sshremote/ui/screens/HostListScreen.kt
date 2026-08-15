@@ -52,13 +52,18 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -81,6 +86,7 @@ import com.stefansundin.sshremote.data.host.Host
 import com.stefansundin.sshremote.ui.HardwareMenuKeyHandler
 import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.components.TextWithInlineIcon
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -192,29 +198,49 @@ fun HostListScreen(
                     titleContentColor = MaterialTheme.colorScheme.primary,
                 ),
                 actions = {
-                    IconButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            undoableDeletedHostId = null
-                            onHelp()
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(stringResource(R.string.help))
+                            }
                         },
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Help,
-                            contentDescription = stringResource(R.string.help),
-                        )
+                        IconButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                undoableDeletedHostId = null
+                                onHelp()
+                            },
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.Help, stringResource(R.string.help))
+                        }
                     }
-                    IconButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            undoableDeletedHostId = null
-                            onSettings()
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(stringResource(R.string.settings))
+                            }
                         },
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.settings),
-                        )
+                        IconButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                undoableDeletedHostId = null
+                                onSettings()
+                            },
+                        ) {
+                            Icon(Icons.Default.Settings, stringResource(R.string.settings))
+                        }
                     }
                 },
             )
@@ -224,7 +250,7 @@ fun HostListScreen(
                 onClick = {},
                 interactionSource = interactionSource,
             ) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_ssh_host))
+                Icon(Icons.Filled.Add, stringResource(R.string.add_ssh_host))
             }
         },
     ) { innerPadding ->
@@ -323,6 +349,7 @@ fun HostListScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HostItem(
     host: Host,
@@ -385,16 +412,26 @@ fun HostItem(
             }
 
             Box {
-                IconButton(
-                    onClick = {
-                        view.playSoundEffect(SoundEffectConstants.CLICK)
-                        onMenuOpened()
+                TooltipBox(
+                    state = rememberTooltipState(),
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Start,
+                        AppDimens.tooltipAnchorOffset,
+                    ),
+                    tooltip = {
+                        PlainTooltip {
+                            Text(stringResource(R.string.more_options))
+                        }
                     },
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = stringResource(R.string.more_options),
-                    )
+                    IconButton(
+                        onClick = {
+                            view.playSoundEffect(SoundEffectConstants.CLICK)
+                            onMenuOpened()
+                        },
+                    ) {
+                        Icon(Icons.Default.MoreVert, stringResource(R.string.more_options))
+                    }
                 }
 
                 DropdownMenu(

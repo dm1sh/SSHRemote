@@ -126,7 +126,7 @@ fun CommandOutputDialog(
                         ) {
                             Icon(
                                 Icons.Outlined.Share,
-                                contentDescription = stringResource(R.string.share),
+                                stringResource(R.string.share),
                                 modifier = Modifier.size(ButtonDefaults.IconSize),
                             )
                             Spacer(Modifier.size(ButtonDefaults.IconSpacing))
@@ -143,7 +143,7 @@ fun CommandOutputDialog(
                         ) {
                             Icon(
                                 Icons.Outlined.ContentCopy,
-                                contentDescription = stringResource(R.string.copy),
+                                stringResource(R.string.copy),
                                 modifier = Modifier.size(ButtonDefaults.IconSize),
                             )
                             Spacer(Modifier.size(ButtonDefaults.IconSpacing))

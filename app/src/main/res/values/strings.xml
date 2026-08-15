@@ -134,6 +134,8 @@
     <string name="run_command_in_background">Run command in background</string>
     <string name="shortcut_label">Shortcut label</string>
     <string name="connecting">Connecting…</string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
     <string name="executing_command">Executing command…</string>
     <string name="executing_on">Executing on %s</string>
     <string name="sharing_to">Sharing to %s</string>

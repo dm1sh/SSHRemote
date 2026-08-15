@@ -56,6 +56,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -63,7 +64,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -97,6 +102,7 @@ import com.stefansundin.sshremote.ui.components.NoWrapOnSpecialCharactersVisualT
 import com.stefansundin.sshremote.ui.components.PublicKeyDialog
 import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.components.TextWithInlineIcon
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -232,29 +238,49 @@ fun KnownHostListScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.known_hosts)) },
                 navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            onNavigateUp()
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(stringResource(R.string.go_back))
+                            }
                         },
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.navigate_back),
-                        )
+                        IconButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                onNavigateUp()
+                            },
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.go_back))
+                        }
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            showFormatHelp = true
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(stringResource(R.string.help))
+                            }
                         },
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Help,
-                            contentDescription = stringResource(R.string.known_host_help_title),
-                        )
+                        IconButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                showFormatHelp = true
+                            },
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.Help, stringResource(R.string.help))
+                        }
                     }
                 },
             )
@@ -264,7 +290,7 @@ fun KnownHostListScreen(
                 onClick = {},
                 interactionSource = interactionSource,
             ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_entries))
+                Icon(Icons.Default.Add, stringResource(R.string.add_entries))
             }
         },
     ) { innerPadding ->
@@ -339,6 +365,7 @@ fun KnownHostListScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun KnownHostItem(
     entry: KnownHost,
@@ -368,13 +395,26 @@ private fun KnownHostItem(
         },
         trailingContent = {
             Box {
-                IconButton(
-                    onClick = {
-                        view.playSoundEffect(SoundEffectConstants.CLICK)
-                        onMenuOpened()
+                TooltipBox(
+                    state = rememberTooltipState(),
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Start,
+                        AppDimens.tooltipAnchorOffset,
+                    ),
+                    tooltip = {
+                        PlainTooltip {
+                            Text(stringResource(R.string.more_options))
+                        }
                     },
                 ) {
-                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
+                    IconButton(
+                        onClick = {
+                            view.playSoundEffect(SoundEffectConstants.CLICK)
+                            onMenuOpened()
+                        },
+                    ) {
+                        Icon(Icons.Default.MoreVert, stringResource(R.string.more_options))
+                    }
                 }
                 DropdownMenu(
                     expanded = isContextMenuVisible,

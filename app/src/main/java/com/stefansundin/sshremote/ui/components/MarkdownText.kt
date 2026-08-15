@@ -1012,8 +1012,8 @@ private fun MarkdownLinkDialog(
             Row {
                 TextButton(onClick = onCopy) {
                     Icon(
-                        imageVector = Icons.Outlined.ContentCopy,
-                        contentDescription = stringResource(R.string.copy),
+                        Icons.Outlined.ContentCopy,
+                        stringResource(R.string.copy),
                         modifier = Modifier.size(ButtonDefaults.IconSize),
                     )
                     Spacer(Modifier.size(ButtonDefaults.IconSpacing))

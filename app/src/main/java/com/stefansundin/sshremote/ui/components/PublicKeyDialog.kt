@@ -22,9 +22,9 @@ import android.content.ClipData
 import android.content.Intent
 import android.content.res.Configuration
 import android.view.SoundEffectConstants
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -149,7 +149,7 @@ fun PublicKeyDialog(
                     ) {
                         Icon(
                             Icons.Outlined.Share,
-                            contentDescription = stringResource(R.string.share),
+                            stringResource(R.string.share),
                             modifier = Modifier.size(ButtonDefaults.IconSize),
                         )
                         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
@@ -166,7 +166,7 @@ fun PublicKeyDialog(
                 ) {
                     Icon(
                         Icons.Outlined.ContentCopy,
-                        contentDescription = stringResource(R.string.copy),
+                        stringResource(R.string.copy),
                         modifier = Modifier.size(ButtonDefaults.IconSize),
                     )
                     Spacer(Modifier.size(ButtonDefaults.IconSpacing))

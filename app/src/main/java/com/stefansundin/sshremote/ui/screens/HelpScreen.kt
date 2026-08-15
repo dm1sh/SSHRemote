@@ -39,10 +39,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -62,6 +67,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.stefansundin.sshremote.R
 import com.stefansundin.sshremote.ui.components.MarkdownText
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,16 +101,26 @@ fun HelpScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.help)) },
                 navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            onNavigateUp()
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(stringResource(R.string.go_back))
+                            }
                         },
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                        )
+                        IconButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                onNavigateUp()
+                            },
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.go_back))
+                        }
                     }
                 },
                 actions = {
@@ -121,14 +137,23 @@ fun HelpScreen(
                             }
                         },
                     ) {
-                        Icon(
-                            imageVector = if (isSearchEnabled) Icons.Filled.Close else Icons.Filled.Search,
-                            contentDescription = if (isSearchEnabled) {
-                                stringResource(R.string.close)
-                            } else {
-                                stringResource(R.string.search)
+                        val icon = if (isSearchEnabled) Icons.Filled.Close else Icons.Filled.Search
+                        val description = stringResource(if (isSearchEnabled) R.string.clear else R.string.search)
+
+                        TooltipBox(
+                            state = rememberTooltipState(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Below,
+                                AppDimens.tooltipAnchorOffset,
+                            ),
+                            tooltip = {
+                                PlainTooltip {
+                                    Text(description)
+                                }
                             },
-                        )
+                        ) {
+                            Icon(icon, description)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -162,14 +187,24 @@ fun HelpScreen(
                         },
                     ),
                     trailingIcon = {
-                        IconButton(
-                            onClick = { searchNextRequest++ },
-                            enabled = searchTotalMatches > 0,
+                        TooltipBox(
+                            state = rememberTooltipState(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Below,
+                                AppDimens.tooltipAnchorOffset,
+                            ),
+                            tooltip = {
+                                PlainTooltip {
+                                    Text(stringResource(R.string.search_next_match))
+                                }
+                            },
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.KeyboardArrowDown,
-                                contentDescription = stringResource(R.string.search_next_match),
-                            )
+                            IconButton(
+                                onClick = { searchNextRequest++ },
+                                enabled = searchTotalMatches > 0,
+                            ) {
+                                Icon(Icons.Filled.KeyboardArrowDown, stringResource(R.string.search_next_match))
+                            }
                         }
                     },
                     supportingText = {

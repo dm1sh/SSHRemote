@@ -50,6 +50,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecondaryTabRow
@@ -57,7 +58,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,6 +88,7 @@ import com.journeyapps.barcodescanner.ScanOptions
 import com.stefansundin.sshremote.R
 import com.stefansundin.sshremote.ui.components.NoWrapOnSpecialCharactersVisualTransformation
 import com.stefansundin.sshremote.ui.dpadFocusable
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -563,21 +569,31 @@ fun AddIdentityScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.add_ssh_key_title)) },
                 navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            view.playSoundEffect(SoundEffectConstants.CLICK)
-                            if (hasUnsavedChanges && isFormValid) {
-                                showSaveDialog = true
-                            } else {
-                                onNavigateUp()
+                    TooltipBox(
+                        state = rememberTooltipState(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                            AppDimens.tooltipAnchorOffset,
+                        ),
+                        tooltip = {
+                            PlainTooltip {
+                                Text(stringResource(R.string.go_back))
                             }
                         },
-                        enabled = !isGenerating,
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                        )
+                        IconButton(
+                            onClick = {
+                                view.playSoundEffect(SoundEffectConstants.CLICK)
+                                if (hasUnsavedChanges && isFormValid) {
+                                    showSaveDialog = true
+                                } else {
+                                    onNavigateUp()
+                                }
+                            },
+                            enabled = !isGenerating,
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.go_back))
+                        }
                     }
                 },
             )
@@ -590,10 +606,7 @@ fun AddIdentityScreen(
                         handleSave()
                     },
                 ) {
-                    Icon(
-                        Icons.Default.Save,
-                        contentDescription = stringResource(R.string.save),
-                    )
+                    Icon(Icons.Default.Save, stringResource(R.string.save))
                 }
             }
         },
@@ -805,8 +818,8 @@ fun ManualEntryTab(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Icon(
-            imageVector = Icons.Default.ContentPaste,
-            contentDescription = stringResource(R.string.paste_from_clipboard),
+            Icons.Default.ContentPaste,
+            stringResource(R.string.paste_from_clipboard),
             modifier = Modifier.padding(end = 8.dp),
         )
         Text(stringResource(R.string.paste_from_clipboard))

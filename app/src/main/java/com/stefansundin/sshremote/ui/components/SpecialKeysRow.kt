@@ -225,8 +225,8 @@ private fun KeyButton(
         ) {
             if (keyData.icon != null) {
                 Icon(
-                    imageVector = keyData.icon,
-                    contentDescription = keyData.label,
+                    keyData.icon,
+                    keyData.label,
                     modifier = Modifier.size(18.dp),
                 )
             } else {

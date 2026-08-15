@@ -49,12 +49,17 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -94,6 +99,7 @@ import com.stefansundin.sshremote.ui.components.HapticFeedbackSettingDialog
 import com.stefansundin.sshremote.ui.components.QrCodeDialog
 import com.stefansundin.sshremote.ui.components.ScrollbarContainer
 import com.stefansundin.sshremote.ui.components.ThemeSettingDialog
+import com.stefansundin.sshremote.ui.theme.AppDimens
 import com.stefansundin.sshremote.ui.theme.SSHRemoteTheme
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -616,19 +622,29 @@ fun SettingsScreen(
                 TopAppBar(
                     title = { Text(stringResource(R.string.settings)) },
                     navigationIcon = {
-                        IconButton(
-                            onClick = {
-                                view.playSoundEffect(SoundEffectConstants.CLICK)
-                                if (previewTheme != savedTheme) {
-                                    settingsViewModel.setTheme(savedTheme)
+                        TooltipBox(
+                            state = rememberTooltipState(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Below,
+                                AppDimens.tooltipAnchorOffset,
+                            ),
+                            tooltip = {
+                                PlainTooltip {
+                                    Text(stringResource(R.string.go_back))
                                 }
-                                onNavigateUp()
                             },
                         ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.back),
-                            )
+                            IconButton(
+                                onClick = {
+                                    view.playSoundEffect(SoundEffectConstants.CLICK)
+                                    if (previewTheme != savedTheme) {
+                                        settingsViewModel.setTheme(savedTheme)
+                                    }
+                                    onNavigateUp()
+                                },
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.go_back))
+                            }
                         }
                     },
                 )

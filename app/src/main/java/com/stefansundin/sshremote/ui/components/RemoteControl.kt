@@ -304,10 +304,7 @@ private fun ActionButtons(
                 pressedKeys.contains(RemoteControlKey.VOLUME_DOWN),
                 buttonModifier,
             ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.VolumeDown,
-                    contentDescription = stringResource(R.string.key_volume_down),
-                )
+                Icon(Icons.AutoMirrored.Filled.VolumeDown, stringResource(R.string.key_volume_down))
             }
             RemoteButton(
                 key = RemoteControlKey.MUTE,
@@ -323,7 +320,7 @@ private fun ActionButtons(
                     ButtonDefaults.buttonColors()
                 },
             ) {
-                Icon(Icons.AutoMirrored.Filled.VolumeOff, contentDescription = stringResource(R.string.key_mute))
+                Icon(Icons.AutoMirrored.Filled.VolumeOff, stringResource(R.string.key_mute))
             }
             RemoteButton(
                 RemoteControlKey.VOLUME_UP,
@@ -334,7 +331,7 @@ private fun ActionButtons(
                 pressedKeys.contains(RemoteControlKey.VOLUME_UP),
                 buttonModifier,
             ) {
-                Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = stringResource(R.string.key_volume_up))
+                Icon(Icons.AutoMirrored.Filled.VolumeUp, stringResource(R.string.key_volume_up))
             }
         }
         Row(
@@ -350,7 +347,7 @@ private fun ActionButtons(
                 pressedKeys.contains(RemoteControlKey.BACK),
                 buttonModifier,
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.key_back))
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.key_back))
             }
             RemoteButton(
                 RemoteControlKey.HOME,
@@ -361,7 +358,7 @@ private fun ActionButtons(
                 pressedKeys.contains(RemoteControlKey.HOME),
                 buttonModifier,
             ) {
-                Icon(Icons.Default.Home, contentDescription = stringResource(R.string.key_home))
+                Icon(Icons.Default.Home, stringResource(R.string.key_home))
             }
             RemoteButton(
                 RemoteControlKey.MENU,
@@ -372,7 +369,7 @@ private fun ActionButtons(
                 pressedKeys.contains(RemoteControlKey.MENU),
                 buttonModifier,
             ) {
-                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.key_menu))
+                Icon(Icons.Default.Menu, stringResource(R.string.key_menu))
             }
         }
         Row(
@@ -388,7 +385,7 @@ private fun ActionButtons(
                 pressedKeys.contains(RemoteControlKey.PREVIOUS),
                 buttonModifier,
             ) {
-                Icon(Icons.Default.SkipPrevious, contentDescription = stringResource(R.string.key_previous))
+                Icon(Icons.Default.SkipPrevious, stringResource(R.string.key_previous))
             }
             RemoteButton(
                 RemoteControlKey.PLAY_PAUSE,
@@ -399,8 +396,8 @@ private fun ActionButtons(
                 pressedKeys.contains(RemoteControlKey.PLAY_PAUSE),
                 buttonModifier,
             ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.key_play_pause))
-                Icon(Icons.Default.Pause, contentDescription = stringResource(R.string.key_play_pause))
+                Icon(Icons.Default.PlayArrow, stringResource(R.string.key_play_pause))
+                Icon(Icons.Default.Pause, stringResource(R.string.key_play_pause))
             }
             RemoteButton(
                 RemoteControlKey.NEXT,
@@ -411,7 +408,7 @@ private fun ActionButtons(
                 pressedKeys.contains(RemoteControlKey.NEXT),
                 buttonModifier,
             ) {
-                Icon(Icons.Default.SkipNext, contentDescription = stringResource(R.string.key_next))
+                Icon(Icons.Default.SkipNext, stringResource(R.string.key_next))
             }
         }
     }
@@ -448,8 +445,8 @@ private fun Dpad(
             PaddingValues(0.dp),
         ) {
             Icon(
-                imageVector = Icons.Default.KeyboardArrowUp,
-                contentDescription = stringResource(R.string.key_up),
+                Icons.Default.KeyboardArrowUp,
+                stringResource(R.string.key_up),
                 modifier = Modifier
                     .size(iconSize)
                     .offset(y = -iconOffset),
@@ -469,8 +466,8 @@ private fun Dpad(
             PaddingValues(0.dp),
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = stringResource(R.string.key_right),
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                stringResource(R.string.key_right),
                 modifier = Modifier
                     .size(iconSize)
                     .offset(x = iconOffset),
@@ -490,8 +487,8 @@ private fun Dpad(
             PaddingValues(0.dp),
         ) {
             Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = stringResource(R.string.key_down),
+                Icons.Default.KeyboardArrowDown,
+                stringResource(R.string.key_down),
                 modifier = Modifier
                     .size(iconSize)
                     .offset(y = iconOffset),
@@ -511,8 +508,8 @@ private fun Dpad(
             PaddingValues(0.dp),
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = stringResource(R.string.key_left),
+                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                stringResource(R.string.key_left),
                 modifier = Modifier
                     .size(iconSize)
                     .offset(x = -iconOffset),
@@ -537,7 +534,7 @@ private fun Dpad(
             ) {
                 Icon(
                     Icons.Default.RadioButtonUnchecked,
-                    contentDescription = stringResource(R.string.key_select),
+                    stringResource(R.string.key_select),
                     modifier = Modifier.fillMaxSize(0.8f),
                 )
             }
