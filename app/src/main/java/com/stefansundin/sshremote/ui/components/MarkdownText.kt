@@ -46,6 +46,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.selection.SelectionState
+import androidx.compose.foundation.text.selection.rememberSelectionState
+import androidx.compose.foundation.text.contextmenu.builder.item
+import androidx.compose.foundation.text.contextmenu.modifier.appendTextContextMenuComponents
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckBox
@@ -78,6 +83,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -89,8 +95,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -876,7 +884,108 @@ fun MarkdownText(
             scrollToCurrentMatch(topLevelBlockIndex)
         }
 
-        SelectionContainer {
+        val markdownSelectionState = rememberSelectionState()
+        var selectionContext by remember(blocks) { mutableStateOf<MarkdownSelectionContext?>(null) }
+        val topLevelSelectableRanges = remember(blocks) {
+            buildList(blocks.size) {
+                var nextSelectableIndex = 0
+                blocks.forEach { block ->
+                    val selectableRange = selectableRangeForBlock(
+                        startSelectableIndex = nextSelectableIndex,
+                        block = block,
+                    )
+                    add(selectableRange)
+                    nextSelectableIndex = selectableRange.endIndexExclusive
+                }
+            }
+        }
+
+        SelectionContainer(
+            state = markdownSelectionState,
+            modifier = Modifier.appendTextContextMenuComponents {
+                when (val context = selectionContext) {
+                    is MarkdownSelectionContext.Block -> {
+                        if (!context.selectableRange.isEmpty) {
+                            item(
+                                key = context.actionKey,
+                                label = resources.getString(context.actionLabelRes),
+                            ) {
+                                selectSelectableRange(
+                                    selectionState = markdownSelectionState,
+                                    selectableRange = context.selectableRange,
+                                )
+                                close()
+                            }
+                            context.additionalActions.forEach { additionalAction ->
+                                if (!additionalAction.selectableRange.isEmpty) {
+                                    item(
+                                        key = additionalAction.actionKey,
+                                        label = resources.getString(additionalAction.actionLabelRes),
+                                    ) {
+                                        selectSelectableRange(
+                                            selectionState = markdownSelectionState,
+                                            selectableRange = additionalAction.selectableRange,
+                                        )
+                                        close()
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    is MarkdownSelectionContext.Table -> {
+                        separator()
+                        item(
+                            key = SelectTableCellMenuKey,
+                            label = resources.getString(R.string.select_table_cell),
+                        ) {
+                            val selectableRange = selectableRangeForCell(
+                                activeCell = context.activeCell,
+                                tableSelectableRange = context.selectableRange,
+                                columnsPerRow = context.columnsPerRow,
+                            )
+                            if (selectableRange != null) {
+                                selectSelectableRange(
+                                    selectionState = markdownSelectionState,
+                                    selectableRange = selectableRange,
+                                )
+                            }
+                            close()
+                        }
+                        item(
+                            key = SelectTableRowMenuKey,
+                            label = resources.getString(R.string.select_table_row),
+                        ) {
+                            val selectableRange = selectableRangeForRow(
+                                activeCell = context.activeCell,
+                                tableSelectableRange = context.selectableRange,
+                                columnsPerRow = context.columnsPerRow,
+                            )
+                            if (selectableRange != null) {
+                                selectSelectableRange(
+                                    selectionState = markdownSelectionState,
+                                    selectableRange = selectableRange,
+                                )
+                            }
+                            close()
+                        }
+                        item(
+                            key = SelectFullTableMenuKey,
+                            label = resources.getString(R.string.select_full_table),
+                        ) {
+                            selectSelectableRange(
+                                selectionState = markdownSelectionState,
+                                selectableRange = context.selectableRange,
+                            )
+                            close()
+                        }
+                        separator()
+                    }
+
+                    null -> Unit
+                }
+            },
+        ) {
             ScrollbarContainer(
                 modifier = modifier,
                 verticalScrollState = verticalScrollState,
@@ -901,7 +1010,11 @@ fun MarkdownText(
                                     }
                                 },
                         ) {
-                            RenderedBlockComposable(block)
+                            RenderedBlockComposable(
+                                block = block,
+                                selectableRange = topLevelSelectableRanges[index],
+                                onSelectionContextChanged = { context -> selectionContext = context },
+                            )
                         }
                     }
                 }
@@ -1051,7 +1164,13 @@ private fun openLinkInBrowser(context: Context, url: String): Boolean {
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun RenderedBlockComposable(block: RenderedBlock, isInsideList: Boolean = false) {
+private fun RenderedBlockComposable(
+    block: RenderedBlock,
+    selectableRange: SelectableRange,
+    onSelectionContextChanged: (MarkdownSelectionContext) -> Unit,
+    inheritedSelectionContext: MarkdownSelectionContext.Block? = null,
+    isInsideList: Boolean = false,
+) {
     val startNs = System.nanoTime()
 
     when (block) {
@@ -1064,28 +1183,54 @@ private fun RenderedBlockComposable(block: RenderedBlock, isInsideList: Boolean 
                 5 -> MaterialTheme.typography.titleMedium
                 else -> MaterialTheme.typography.titleSmall
             }
+            val headingContext = inheritedSelectionContext ?: MarkdownSelectionContext.Block(
+                actionKey = SelectHeadingMenuKey,
+                actionLabelRes = R.string.select_heading,
+                selectableRange = selectableRange,
+            )
             Text(
                 text = block.text,
                 style = style,
-                modifier = Modifier.padding(
-                    top = if (block.level <= 2) 8.dp else 4.dp,
-                    bottom = 4.dp,
-                ),
+                modifier = Modifier
+                    .trackSelectionContext {
+                        onSelectionContextChanged(headingContext)
+                    }
+                    .padding(
+                        top = if (block.level <= 2) 8.dp else 4.dp,
+                        bottom = 4.dp,
+                    ),
             )
         }
 
         is RenderedBlock.RenderedParagraph -> {
+            val paragraphContext = inheritedSelectionContext ?: MarkdownSelectionContext.Block(
+                actionKey = SelectParagraphMenuKey,
+                actionLabelRes = R.string.select_paragraph,
+                selectableRange = selectableRange,
+            )
             Text(
                 text = block.text,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(bottom = if (isInsideList) 0.dp else 8.dp),
+                modifier = Modifier
+                    .trackSelectionContext {
+                        onSelectionContextChanged(paragraphContext)
+                    }
+                    .padding(bottom = if (isInsideList) 0.dp else 8.dp),
             )
         }
 
         is RenderedBlock.RenderedCode -> {
             val codeBackground = MaterialTheme.colorScheme.surfaceVariant
+            val codeContext = inheritedSelectionContext ?: MarkdownSelectionContext.Block(
+                actionKey = SelectCodeBlockMenuKey,
+                actionLabelRes = R.string.select_block,
+                selectableRange = selectableRange,
+            )
             Box(
                 modifier = Modifier
+                    .trackSelectionContext {
+                        onSelectionContextChanged(codeContext)
+                    }
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
                     .clip(RoundedCornerShape(4.dp))
@@ -1104,13 +1249,25 @@ private fun RenderedBlockComposable(block: RenderedBlock, isInsideList: Boolean 
         }
 
         is RenderedBlock.RenderedTable -> {
-            RenderedTableComposable(table = block)
+            RenderedTableComposable(
+                table = block,
+                selectableRange = selectableRange,
+                onSelectionContextChanged = onSelectionContextChanged,
+            )
         }
 
         is RenderedBlock.RenderedBlockQuote -> {
             val quoteBarColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+            val quoteContext = MarkdownSelectionContext.Block(
+                actionKey = SelectQuoteMenuKey,
+                actionLabelRes = R.string.select_quote,
+                selectableRange = selectableRange,
+            )
             Row(
                 modifier = Modifier
+                    .trackSelectionContext {
+                        onSelectionContextChanged(quoteContext)
+                    }
                     .padding(bottom = 8.dp)
                     .height(IntrinsicSize.Max),
             ) {
@@ -1125,21 +1282,66 @@ private fun RenderedBlockComposable(block: RenderedBlock, isInsideList: Boolean 
                         .weight(1f)
                         .padding(start = 12.dp),
                 ) {
+                    var nextSelectableIndex = selectableRange.startIndex
                     for (child in block.children) {
-                        RenderedBlockComposable(child)
+                        val childSelectableRange = selectableRangeForBlock(nextSelectableIndex, child)
+                        nextSelectableIndex = childSelectableRange.endIndexExclusive
+                        RenderedBlockComposable(
+                            block = child,
+                            selectableRange = childSelectableRange,
+                            onSelectionContextChanged = onSelectionContextChanged,
+                            inheritedSelectionContext = quoteContext,
+                        )
                     }
                 }
             }
         }
 
         is RenderedBlock.RenderedBulletList -> {
+            val listContext = MarkdownSelectionContext.Block(
+                actionKey = SelectListMenuKey,
+                actionLabelRes = R.string.select_list,
+                selectableRange = selectableRange,
+            )
             Column(
-                modifier = Modifier.padding(
-                    bottom = if (block.depth == 0) 8.dp else 0.dp,
-                ),
+                modifier = Modifier
+                    .trackSelectionContext {
+                        onSelectionContextChanged(listContext)
+                    }
+                    .padding(
+                        bottom = if (block.depth == 0) 8.dp else 0.dp,
+                    ),
             ) {
+                var nextSelectableIndex = selectableRange.startIndex
                 for (item in block.items) {
-                    Row(modifier = Modifier.padding(bottom = 0.dp)) {
+                    val itemMarkerSelectableCount = selectableCountForListMarker(item)
+                    val itemBlocksSelectableCount = item.blocks.sumOf(::countSelectablesInBlock)
+                    val itemSelectableRange = SelectableRange(
+                        startIndex = nextSelectableIndex,
+                        endIndexExclusive = nextSelectableIndex + itemMarkerSelectableCount + itemBlocksSelectableCount,
+                    )
+                    val listItemContext = MarkdownSelectionContext.Block(
+                        actionKey = SelectListItemMenuKey,
+                        actionLabelRes = R.string.select_list_item,
+                        selectableRange = itemSelectableRange,
+                        additionalActions = listOf(
+                            MarkdownSelectionAction(
+                                actionKey = SelectListMenuKey,
+                                actionLabelRes = R.string.select_list,
+                                selectableRange = selectableRange,
+                            ),
+                        ),
+                    )
+                    var childSelectableIndex = nextSelectableIndex + itemMarkerSelectableCount
+                    nextSelectableIndex = itemSelectableRange.endIndexExclusive
+
+                    Row(
+                        modifier = Modifier
+                            .trackSelectionContext {
+                                onSelectionContextChanged(listItemContext)
+                            }
+                            .padding(bottom = 0.dp),
+                    ) {
                         if (item.taskChecked != null) {
                             Icon(
                                 imageVector = if (item.taskChecked) Icons.Outlined.CheckBox else Icons.Outlined.CheckBoxOutlineBlank,
@@ -1158,7 +1360,15 @@ private fun RenderedBlockComposable(block: RenderedBlock, isInsideList: Boolean 
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             for (child in item.blocks) {
-                                RenderedBlockComposable(child, isInsideList = true)
+                                val childSelectableRange = selectableRangeForBlock(childSelectableIndex, child)
+                                childSelectableIndex = childSelectableRange.endIndexExclusive
+                                RenderedBlockComposable(
+                                    block = child,
+                                    selectableRange = childSelectableRange,
+                                    onSelectionContextChanged = onSelectionContextChanged,
+                                    inheritedSelectionContext = listItemContext,
+                                    isInsideList = true,
+                                )
                             }
                         }
                     }
@@ -1167,13 +1377,50 @@ private fun RenderedBlockComposable(block: RenderedBlock, isInsideList: Boolean 
         }
 
         is RenderedBlock.RenderedOrderedList -> {
+            val listContext = MarkdownSelectionContext.Block(
+                actionKey = SelectListMenuKey,
+                actionLabelRes = R.string.select_list,
+                selectableRange = selectableRange,
+            )
             Column(
-                modifier = Modifier.padding(
-                    bottom = if (block.depth == 0) 8.dp else 0.dp,
-                ),
+                modifier = Modifier
+                    .trackSelectionContext {
+                        onSelectionContextChanged(listContext)
+                    }
+                    .padding(
+                        bottom = if (block.depth == 0) 8.dp else 0.dp,
+                    ),
             ) {
+                var nextSelectableIndex = selectableRange.startIndex
                 block.items.forEachIndexed { index, item ->
-                    Row(modifier = Modifier.padding(bottom = 0.dp)) {
+                    val itemMarkerSelectableCount = selectableCountForListMarker(item)
+                    val itemBlocksSelectableCount = item.blocks.sumOf(::countSelectablesInBlock)
+                    val itemSelectableRange = SelectableRange(
+                        startIndex = nextSelectableIndex,
+                        endIndexExclusive = nextSelectableIndex + itemMarkerSelectableCount + itemBlocksSelectableCount,
+                    )
+                    val listItemContext = MarkdownSelectionContext.Block(
+                        actionKey = SelectListItemMenuKey,
+                        actionLabelRes = R.string.select_list_item,
+                        selectableRange = itemSelectableRange,
+                        additionalActions = listOf(
+                            MarkdownSelectionAction(
+                                actionKey = SelectListMenuKey,
+                                actionLabelRes = R.string.select_list,
+                                selectableRange = selectableRange,
+                            ),
+                        ),
+                    )
+                    var childSelectableIndex = nextSelectableIndex + itemMarkerSelectableCount
+                    nextSelectableIndex = itemSelectableRange.endIndexExclusive
+
+                    Row(
+                        modifier = Modifier
+                            .trackSelectionContext {
+                                onSelectionContextChanged(listItemContext)
+                            }
+                            .padding(bottom = 0.dp),
+                    ) {
                         if (item.taskChecked != null) {
                             Icon(
                                 imageVector = if (item.taskChecked) Icons.Outlined.CheckBox else Icons.Outlined.CheckBoxOutlineBlank,
@@ -1192,7 +1439,15 @@ private fun RenderedBlockComposable(block: RenderedBlock, isInsideList: Boolean 
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             for (child in item.blocks) {
-                                RenderedBlockComposable(child, isInsideList = true)
+                                val childSelectableRange = selectableRangeForBlock(childSelectableIndex, child)
+                                childSelectableIndex = childSelectableRange.endIndexExclusive
+                                RenderedBlockComposable(
+                                    block = child,
+                                    selectableRange = childSelectableRange,
+                                    onSelectionContextChanged = onSelectionContextChanged,
+                                    inheritedSelectionContext = listItemContext,
+                                    isInsideList = true,
+                                )
                             }
                         }
                     }
@@ -1325,14 +1580,374 @@ private fun calculateTableLayoutMetrics(
 
 private fun List<Dp>.sumDp(): Dp = fold(0.dp) { acc, width -> acc + width }
 
+private data class TableCellCoordinate(
+    val rowIndex: Int,
+    val columnIndex: Int,
+)
+
+private data class SelectableRange(
+    val startIndex: Int,
+    val endIndexExclusive: Int,
+) {
+    val isEmpty: Boolean get() = endIndexExclusive <= startIndex
+}
+
+private sealed interface MarkdownSelectionContext {
+    data class Block(
+        val actionKey: Any,
+        val actionLabelRes: Int,
+        val selectableRange: SelectableRange,
+        val additionalActions: List<MarkdownSelectionAction> = emptyList(),
+    ) : MarkdownSelectionContext
+
+    data class Table(
+        val selectableRange: SelectableRange,
+        val columnsPerRow: Int,
+        val activeCell: TableCellCoordinate,
+    ) : MarkdownSelectionContext
+}
+
+private data class MarkdownSelectionAction(
+    val actionKey: Any,
+    val actionLabelRes: Int,
+    val selectableRange: SelectableRange,
+)
+
+private data object SelectHeadingMenuKey
+private data object SelectParagraphMenuKey
+private data object SelectCodeBlockMenuKey
+private data object SelectQuoteMenuKey
+private data object SelectListMenuKey
+private data object SelectListItemMenuKey
+private data object SelectTableCellMenuKey
+private data object SelectTableRowMenuKey
+private data object SelectFullTableMenuKey
+
+private fun countSelectablesInBlock(block: RenderedBlock): Int {
+    return when (block) {
+        is RenderedBlock.RenderedHeading,
+        is RenderedBlock.RenderedParagraph,
+        is RenderedBlock.RenderedCode,
+            -> 1
+
+        is RenderedBlock.RenderedThematicBreak -> 0
+        is RenderedBlock.RenderedTable -> {
+            val columnsPerRow = block.rows.maxOfOrNull { it.cells.size } ?: 0
+            columnsPerRow * block.rows.size
+        }
+
+        is RenderedBlock.RenderedBlockQuote -> block.children.sumOf(::countSelectablesInBlock)
+        is RenderedBlock.RenderedBulletList -> block.items.sumOf { item ->
+            selectableCountForListMarker(item) + item.blocks.sumOf(::countSelectablesInBlock)
+        }
+
+        is RenderedBlock.RenderedOrderedList -> block.items.sumOf { item ->
+            selectableCountForListMarker(item) + item.blocks.sumOf(::countSelectablesInBlock)
+        }
+    }
+}
+
+private fun selectableCountForListMarker(item: RenderedListItem): Int {
+    return if (item.taskChecked == null) 1 else 0
+}
+
+private fun selectableRangeForBlock(startSelectableIndex: Int, block: RenderedBlock): SelectableRange {
+    return SelectableRange(
+        startIndex = startSelectableIndex,
+        endIndexExclusive = startSelectableIndex + countSelectablesInBlock(block),
+    )
+}
+
+private fun Modifier.trackSelectionContext(onContextFocused: () -> Unit): Modifier {
+    return pointerInput(onContextFocused) {
+        detectTapGestures(
+            onPress = {
+                onContextFocused()
+                tryAwaitRelease()
+            },
+            onLongPress = {
+                onContextFocused()
+            },
+        )
+    }
+}
+
+private fun selectSelectableRange(
+    selectionState: SelectionState,
+    selectableRange: SelectableRange,
+): Boolean {
+    if (selectableRange.isEmpty) return false
+    if (trySelectSelectableRangeExactly(selectionState, selectableRange)) return true
+
+    val selectableTexts = selectionState.getSelectableTexts()
+    val globalRange = buildSelectionRange(
+        selectableTexts = selectableTexts,
+        selectableRange = selectableRange,
+    ) ?: return false
+    selectionState.select(globalRange)
+    return true
+}
+
+private fun trySelectSelectableRangeExactly(
+    selectionState: SelectionState,
+    selectableRange: SelectableRange,
+): Boolean {
+    val manager = getSelectionManagerOrNull(selectionState) ?: return false
+    val coordinates = getSelectionContainerCoordinatesOrNull(manager)?.takeIf { it.isAttached } ?: return false
+    val selectionRegistrar = getSelectionRegistrarOrNull(manager) ?: return false
+    val selectables = getSortedSelectablesOrNull(selectionRegistrar, coordinates) ?: return false
+    val clampedEnd = selectableRange.endIndexExclusive.coerceAtMost(selectables.size)
+    if (selectableRange.startIndex !in selectables.indices || clampedEnd <= selectableRange.startIndex) {
+        return false
+    }
+
+    val startSelectableIndex = findFirstNonEmptySelectableIndex(
+        selectables = selectables,
+        startIndex = selectableRange.startIndex,
+        endIndexExclusive = clampedEnd,
+    ) ?: return false
+    val endSelectableIndex = findLastNonEmptySelectableIndex(
+        selectables = selectables,
+        startIndex = selectableRange.startIndex,
+        endIndexExclusive = clampedEnd,
+    ) ?: return false
+
+    val startAnchor = buildSelectionAnchor(
+        selectable = selectables[startSelectableIndex],
+        offset = 0,
+    ) ?: return false
+    val endSelectable = selectables[endSelectableIndex]
+    val endText = getSelectableTextOrNull(endSelectable) ?: return false
+    val endAnchor = buildSelectionAnchor(
+        selectable = endSelectable,
+        offset = endText.length,
+    ) ?: return false
+
+    val selection = selectionConstructor.newInstance(startAnchor, endAnchor, false)
+    return runCatching {
+        selectionManagerSetSelectionMethod.invoke(manager, selection)
+        true
+    }.getOrDefault(false)
+}
+
+private fun getSelectionManagerOrNull(selectionState: SelectionState): Any? {
+    return runCatching {
+        selectionStateManagerGetter.invoke(selectionState)
+    }.getOrNull()
+}
+
+private fun getSelectionContainerCoordinatesOrNull(manager: Any): androidx.compose.ui.layout.LayoutCoordinates? {
+    return runCatching {
+        selectionManagerContainerLayoutCoordinatesGetter.invoke(manager) as? androidx.compose.ui.layout.LayoutCoordinates
+    }.getOrNull()
+}
+
+private fun getSelectionRegistrarOrNull(manager: Any): Any? {
+    return runCatching {
+        selectionManagerSelectionRegistrarField.get(manager)
+    }.getOrNull()
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun getSortedSelectablesOrNull(
+    selectionRegistrar: Any,
+    coordinates: androidx.compose.ui.layout.LayoutCoordinates,
+): List<Any>? {
+    return runCatching {
+        selectionRegistrarSortMethod.invoke(selectionRegistrar, coordinates) as? List<Any>
+    }.getOrNull()
+}
+
+private fun findFirstNonEmptySelectableIndex(
+    selectables: List<Any>,
+    startIndex: Int,
+    endIndexExclusive: Int,
+): Int? {
+    for (index in startIndex until endIndexExclusive) {
+        if (getSelectableTextOrNull(selectables[index])?.isNotEmpty() == true) return index
+    }
+    return null
+}
+
+private fun findLastNonEmptySelectableIndex(
+    selectables: List<Any>,
+    startIndex: Int,
+    endIndexExclusive: Int,
+): Int? {
+    for (index in (endIndexExclusive - 1) downTo startIndex) {
+        if (getSelectableTextOrNull(selectables[index])?.isNotEmpty() == true) return index
+    }
+    return null
+}
+
+private fun getSelectableTextOrNull(selectable: Any): AnnotatedString? {
+    return runCatching {
+        selectableGetTextMethod.invoke(selectable) as? AnnotatedString
+    }.getOrNull()
+}
+
+private fun getSelectableIdOrNull(selectable: Any): Long? {
+    return runCatching {
+        selectableGetSelectableIdMethod.invoke(selectable) as? Long
+    }.getOrNull()
+}
+
+private fun getSelectableTextLayoutResultOrNull(selectable: Any): TextLayoutResult? {
+    return runCatching {
+        selectableTextLayoutResultMethod.invoke(selectable) as? TextLayoutResult
+    }.getOrNull()
+}
+
+private fun buildSelectionAnchor(selectable: Any, offset: Int): Any? {
+    val textLength = getSelectableTextOrNull(selectable)?.length ?: return null
+    if (textLength <= 0) return null
+
+    val clampedOffset = offset.coerceIn(0, textLength)
+    val directionOffset = if (clampedOffset == textLength) clampedOffset - 1 else clampedOffset
+    val textLayoutResult = getSelectableTextLayoutResultOrNull(selectable) ?: return null
+    val direction = textLayoutResult.getBidiRunDirection(directionOffset)
+    val selectableId = getSelectableIdOrNull(selectable) ?: return null
+    return selectionAnchorInfoConstructor.newInstance(direction, clampedOffset, selectableId)
+}
+
+private val selectionStateManagerGetter by lazy(LazyThreadSafetyMode.NONE) {
+    SelectionState::class.java.getMethod("getManager\$foundation")
+}
+
+private val selectionManagerClass by lazy(LazyThreadSafetyMode.NONE) {
+    Class.forName("androidx.compose.foundation.text.selection.SelectionManager")
+}
+
+private val selectionRegistrarClass by lazy(LazyThreadSafetyMode.NONE) {
+    Class.forName("androidx.compose.foundation.text.selection.SelectionRegistrarImpl")
+}
+
+private val selectableClass by lazy(LazyThreadSafetyMode.NONE) {
+    Class.forName("androidx.compose.foundation.text.selection.Selectable")
+}
+
+private val selectionAnchorInfoClass by lazy(LazyThreadSafetyMode.NONE) {
+    Class.forName("androidx.compose.foundation.text.selection.Selection\$AnchorInfo")
+}
+
+private val selectionClass by lazy(LazyThreadSafetyMode.NONE) {
+    Class.forName("androidx.compose.foundation.text.selection.Selection")
+}
+
+private val selectionManagerContainerLayoutCoordinatesGetter by lazy(LazyThreadSafetyMode.NONE) {
+    selectionManagerClass.getMethod("getContainerLayoutCoordinates")
+}
+
+private val selectionManagerSetSelectionMethod by lazy(LazyThreadSafetyMode.NONE) {
+    selectionManagerClass.getMethod("setSelection\$foundation", selectionClass)
+}
+
+private val selectionManagerSelectionRegistrarField by lazy(LazyThreadSafetyMode.NONE) {
+    selectionManagerClass.getDeclaredField("selectionRegistrar").apply {
+        isAccessible = true
+    }
+}
+
+private val selectionRegistrarSortMethod by lazy(LazyThreadSafetyMode.NONE) {
+    selectionRegistrarClass.getMethod(
+        "sort",
+        androidx.compose.ui.layout.LayoutCoordinates::class.java,
+    )
+}
+
+private val selectableGetTextMethod by lazy(LazyThreadSafetyMode.NONE) {
+    selectableClass.getMethod("getText")
+}
+
+private val selectableGetSelectableIdMethod by lazy(LazyThreadSafetyMode.NONE) {
+    selectableClass.getMethod("getSelectableId")
+}
+
+private val selectableTextLayoutResultMethod by lazy(LazyThreadSafetyMode.NONE) {
+    selectableClass.getMethod("textLayoutResult")
+}
+
+private val selectionAnchorInfoConstructor by lazy(LazyThreadSafetyMode.NONE) {
+    selectionAnchorInfoClass.getConstructor(
+        androidx.compose.ui.text.style.ResolvedTextDirection::class.java,
+        Int::class.javaPrimitiveType,
+        Long::class.javaPrimitiveType,
+    )
+}
+
+private val selectionConstructor by lazy(LazyThreadSafetyMode.NONE) {
+    selectionClass.getConstructor(
+        selectionAnchorInfoClass,
+        selectionAnchorInfoClass,
+        Boolean::class.javaPrimitiveType,
+    )
+}
+
+private fun selectableTextOffset(selectableTexts: List<AnnotatedString>, selectableIndex: Int): Int {
+    var offset = 0
+    for (index in 0 until selectableIndex.coerceAtMost(selectableTexts.size)) {
+        offset += selectableTexts[index].text.length
+    }
+    return offset
+}
+
+private fun buildSelectionRange(
+    selectableTexts: List<AnnotatedString>,
+    selectableRange: SelectableRange,
+): TextRange? {
+    if (selectableRange.startIndex !in selectableTexts.indices) return null
+
+    val clampedEnd = selectableRange.endIndexExclusive.coerceAtMost(selectableTexts.size)
+    if (clampedEnd <= selectableRange.startIndex) return null
+
+    val startOffset = selectableTextOffset(selectableTexts, selectableRange.startIndex)
+    val endOffset = selectableTextOffset(selectableTexts, clampedEnd)
+    return if (endOffset > startOffset) TextRange(startOffset, endOffset) else null
+}
+
+private fun selectableRangeForCell(
+    activeCell: TableCellCoordinate?,
+    tableSelectableRange: SelectableRange,
+    columnsPerRow: Int,
+): SelectableRange? {
+    if (activeCell == null || columnsPerRow <= 0) return null
+    val targetSelectableIndex =
+        tableSelectableRange.startIndex + (activeCell.rowIndex * columnsPerRow) + activeCell.columnIndex
+    if (targetSelectableIndex >= tableSelectableRange.endIndexExclusive) return null
+
+    return SelectableRange(
+        startIndex = targetSelectableIndex,
+        endIndexExclusive = targetSelectableIndex + 1,
+    )
+}
+
+private fun selectableRangeForRow(
+    activeCell: TableCellCoordinate?,
+    tableSelectableRange: SelectableRange,
+    columnsPerRow: Int,
+): SelectableRange? {
+    if (activeCell == null || columnsPerRow <= 0) return null
+
+    val rowStartSelectableIndex = tableSelectableRange.startIndex + (activeCell.rowIndex * columnsPerRow)
+    val rowEndSelectableIndexExclusive = rowStartSelectableIndex + columnsPerRow
+    if (rowStartSelectableIndex >= tableSelectableRange.endIndexExclusive) return null
+
+    return SelectableRange(
+        startIndex = rowStartSelectableIndex,
+        endIndexExclusive = rowEndSelectableIndexExclusive.coerceAtMost(tableSelectableRange.endIndexExclusive),
+    )
+}
+
 @Composable
 private fun RenderTableRow(
     rowData: RenderedTableRow,
+    rowIndex: Int,
     columnWidths: List<Dp>,
     borderColor: Color,
     rowBackground: Color,
     softWrap: Boolean,
     verticalDividerThickness: Dp,
+    onCellInteraction: (rowIndex: Int, columnIndex: Int) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -1352,6 +1967,17 @@ private fun RenderTableRow(
                 },
                 softWrap = softWrap,
                 modifier = Modifier
+                    .pointerInput(rowIndex, index) {
+                        detectTapGestures(
+                            onPress = {
+                                onCellInteraction(rowIndex, index)
+                                tryAwaitRelease()
+                            },
+                            onLongPress = {
+                                onCellInteraction(rowIndex, index)
+                            },
+                        )
+                    }
                     .width(columnWidth)
                     .padding(horizontal = 8.dp, vertical = 6.dp),
             )
@@ -1368,7 +1994,11 @@ private fun RenderTableRow(
 }
 
 @Composable
-private fun RenderedTableComposable(table: RenderedBlock.RenderedTable) {
+private fun RenderedTableComposable(
+    table: RenderedBlock.RenderedTable,
+    selectableRange: SelectableRange,
+    onSelectionContextChanged: (MarkdownSelectionContext) -> Unit,
+) {
     if (table.rows.isEmpty()) return
 
     val tableStateKey = "table-overflow-${table.id}"
@@ -1376,6 +2006,7 @@ private fun RenderedTableComposable(table: RenderedBlock.RenderedTable) {
     val horizontalScrollState = rememberScrollState()
 
     val density = LocalDensity.current
+
     val textMeasurer = rememberTextMeasurer()
     val bodyCellStyle = MaterialTheme.typography.bodySmall
     val headerCellStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
@@ -1429,6 +2060,7 @@ private fun RenderedTableComposable(table: RenderedBlock.RenderedTable) {
         val headerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
         val tableShape = MaterialTheme.shapes.small
 
+        val columnsPerRow = tableLayout.columnWidths.size
         val tableContainerModifier = Modifier
             .width(tableLayout.tableContentWidth)
             .clip(tableShape)
@@ -1439,6 +2071,7 @@ private fun RenderedTableComposable(table: RenderedBlock.RenderedTable) {
                 table.rows.forEachIndexed { index, rowData ->
                     RenderTableRow(
                         rowData = rowData,
+                        rowIndex = index,
                         columnWidths = tableLayout.columnWidths,
                         borderColor = borderColor,
                         rowBackground = when {
@@ -1448,6 +2081,16 @@ private fun RenderedTableComposable(table: RenderedBlock.RenderedTable) {
                         },
                         softWrap = overflow == MarkdownTableOverflowMode.Wrap,
                         verticalDividerThickness = verticalDividerThickness,
+                        onCellInteraction = { rowIndex, columnIndex ->
+                            val cell = TableCellCoordinate(rowIndex, columnIndex)
+                            onSelectionContextChanged(
+                                MarkdownSelectionContext.Table(
+                                    selectableRange = selectableRange,
+                                    columnsPerRow = columnsPerRow,
+                                    activeCell = cell,
+                                ),
+                            )
+                        },
                     )
 
                     if (index < table.rows.lastIndex) {

@@ -424,4 +424,15 @@
     <string name="custom_share_command">Custom share command</string>
     <string name="share_command_placeholder">%s will be replaced with the shared text</string>
 
+    <!-- Markdown -->
+    <string name="select_heading">Select heading</string>
+    <string name="select_paragraph">Select paragraph</string>
+    <string name="select_block">Select block</string>
+    <string name="select_quote">Select quote</string>
+    <string name="select_list">Select list</string>
+    <string name="select_list_item">Select list item</string>
+    <string name="select_table_cell">Select table cell</string>
+    <string name="select_table_row">Select table row</string>
+    <string name="select_full_table">Select full table</string>
+
 </resources>
