@@ -36,6 +36,20 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+
+            // Signs release builds when configured via environment variables (used by CI), otherwise produces an unsigned APK
+            val storeFilePath = System.getenv("SIGNING_STORE_FILE")
+            val storePassword = System.getenv("SIGNING_STORE_PASSWORD")
+            val keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+            val keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+            if (!storeFilePath.isNullOrBlank() && !storePassword.isNullOrBlank() && !keyAlias.isNullOrBlank() && !keyPassword.isNullOrBlank()) {
+                signingConfig = signingConfigs.create("ci") {
+                    storeFile = file(storeFilePath)
+                    this.storePassword = storePassword
+                    this.keyAlias = keyAlias
+                    this.keyPassword = keyPassword
+                }
+            }
         }
     }
 
