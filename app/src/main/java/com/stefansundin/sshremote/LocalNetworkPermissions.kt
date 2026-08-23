@@ -32,8 +32,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import java.net.Inet4Address
+import java.net.Inet6Address
+import java.net.InetAddress
+import java.net.UnknownHostException
 
 object LocalNetworkPermissions {
     val PERMISSION = Manifest.permission.ACCESS_LOCAL_NETWORK
@@ -44,10 +50,68 @@ object LocalNetworkPermissions {
         }
         return ContextCompat.checkSelfPermission(context, PERMISSION) == PackageManager.PERMISSION_GRANTED
     }
+
+    // Matches the definition of a local network from https://developer.android.com/privacy-and-security/local-network-definition:
+    // RFC1918 private ranges, CGNAT, link-local, loopback, IPv6 unique local addresses, plus multicast and broadcast addresses.
+    fun isLocalAddress(address: InetAddress): Boolean {
+        if (address.isAnyLocalAddress || address.isLoopbackAddress) {
+            return true
+        }
+
+        val octets = address.address
+
+        if (address is Inet4Address) {
+            val b0 = octets[0].toInt() and 0xFF
+            val b1 = octets[1].toInt() and 0xFF
+
+            // 1. Link Local: 169.254.0.0/16
+            if (b0 == 169 && b1 == 254) return true
+
+            // 2. CGNAT: 100.64.0.0/10 (range 100.64.0.0 – 100.127.255.255)
+            if (b0 == 100 && b1 in 64..127) return true
+
+            // 3. RFC 1918 Private Networks:
+            // - 10.0.0.0/8
+            if (b0 == 10) return true
+            // - 172.16.0.0/12 (range 172.16.0.0 – 172.31.255.255)
+            if (b0 == 172 && b1 in 16..31) return true
+            // - 192.168.0.0/16
+            if (b0 == 192 && b1 == 168) return true
+
+            // 4. IPv4 Broadcast: 255.255.255.255
+            if (octets.all { (it.toInt() and 0xFF) == 0xFF }) return true
+
+            // 5. IPv4 Multicast: 224.0.0.0/4 (range 224.0.0.0 – 239.255.255.255)
+            if (b0 in 224..239) return true
+
+        } else if (address is Inet6Address) {
+            // 1. Unique local addresses (ULA): fc00::/7
+            if ((octets[0].toInt() and 0xFE) == 0xFC) return true
+
+            // 2. Link-local IPv6 addresses: fe80::/10
+            if ((octets[0].toInt() and 0xFF) == 0xFE && (octets[1].toInt() and 0xC0) == 0x80) return true
+
+            // 3. IPv6 Multicast: ff00::/8
+            if ((octets[0].toInt() and 0xFF) == 0xFF) return true
+        }
+
+        return false
+    }
+
+    suspend fun isLocalHost(hostname: String): Boolean = withContext(Dispatchers.IO) {
+        if (hostname.endsWith(".local", ignoreCase = true)) {
+            return@withContext true
+        }
+        try {
+            InetAddress.getAllByName(hostname).any { isLocalAddress(it) }
+        } catch (e: UnknownHostException) {
+            false
+        }
+    }
 }
 
 @Composable
-fun rememberLocalNetworkPermissionRequest(): suspend () -> Boolean {
+fun rememberLocalNetworkPermissionRequest(): suspend (String) -> Boolean {
     val context = LocalContext.current
     var result by remember { mutableStateOf<Boolean?>(null) }
     val launcher = rememberLauncherForActivityResult(
@@ -56,16 +120,16 @@ fun rememberLocalNetworkPermissionRequest(): suspend () -> Boolean {
         result = granted
     }
     return remember {
-        suspend {
-            if (LocalNetworkPermissions.isGranted(context)) {
-                true
-            } else {
+        suspend { hostname: String ->
+            if (!LocalNetworkPermissions.isGranted(context) && LocalNetworkPermissions.isLocalHost(hostname)) {
                 result = null
                 launcher.launch(LocalNetworkPermissions.PERMISSION)
                 snapshotFlow { result }
                     .filterNotNull()
                     .first()
                     .also { result = null }
+            } else {
+                true
             }
         }
     }

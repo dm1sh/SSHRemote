@@ -282,7 +282,7 @@ fun RemoteControlScreen(
     LaunchedEffect(host) {
         if (uiState.hostId != host.id) {
             wasConnected = false
-            if (ensureLocalNetworkPermission()) {
+            if (ensureLocalNetworkPermission(host.hostname)) {
                 hostViewModel.connect(host)
             } else {
                 Toast.makeText(context, permissionDeniedMsg, Toast.LENGTH_SHORT).show()
@@ -293,7 +293,7 @@ fun RemoteControlScreen(
     // Reconnect in case of disconnection
     LaunchedEffect(host, uiState.connectionStatus, uiState.error, uiState.hostId) {
         if (uiState.hostId == host.id && uiState.connectionStatus == ConnectionStatus.DISCONNECTED && uiState.error == null && wasConnected) {
-            if (!ensureLocalNetworkPermission()) {
+            if (!ensureLocalNetworkPermission(host.hostname)) {
                 Toast.makeText(context, permissionDeniedMsg, Toast.LENGTH_SHORT).show()
                 return@LaunchedEffect
             }

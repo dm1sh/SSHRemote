@@ -98,8 +98,8 @@ class RouterActivity : ComponentActivity() {
         localNetworkPermissionContinuation?.complete(granted)
     }
 
-    private suspend fun ensureLocalNetworkPermission(): Boolean {
-        if (LocalNetworkPermissions.isGranted(this)) {
+    private suspend fun ensureLocalNetworkPermission(hostname: String): Boolean {
+        if (LocalNetworkPermissions.isGranted(this) || !LocalNetworkPermissions.isLocalHost(hostname)) {
             return true
         }
         val deferred = CompletableDeferred<Boolean>()
@@ -361,7 +361,7 @@ class RouterActivity : ComponentActivity() {
         }
         app.activeConnectionTracker.update(host.id, ConnectionStatus.CONNECTING)
 
-        if (!ensureLocalNetworkPermission()) {
+        if (!ensureLocalNetworkPermission(host.hostname)) {
             app.activeConnectionTracker.update(host.id, ConnectionStatus.DISCONNECTED)
             val errorMessage = getString(R.string.permission_denied)
             if (showUi) {
