@@ -17,8 +17,8 @@ android {
         applicationId = "com.stefansundin.sshremote"
         minSdk = 23
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.0.0"
+        versionCode = 5
+        versionName = "1.1.0"
         base.archivesName = "ssh-remote-$versionName"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

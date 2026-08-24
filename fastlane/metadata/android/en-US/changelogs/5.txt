@@ -1,0 +1,8 @@
+* Show the remote control on top of the lock screen.
+* Bind physical hardware keys to remote buttons, and configure separate commands for pressing vs releasing each button. Volume up/down presets now repeat while held by default.
+* Volume slider improvements: haptic feedback and larger touch areas at the screen edges for min/max volume. The volume display now refreshes when returning to the app after changing it from the notification.
+* Request the ACCESS_LOCAL_NETWORK permission when connecting to local network addresses.
+* Support opening ssh:// links.
+* Add option to cancel a pending command execution.
+* Fix mouse movement and smart volume behavior.
+* Fixes: importing settings on Android 6, not being able to disable a button, and splash screen colors/icon glitches.
