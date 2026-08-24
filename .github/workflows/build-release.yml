@@ -1,41 +1,13 @@
-name: Build
+name: Build & Release
 
 on:
   push:
-    branches:
-      - '**'
     tags:
       - '**'
 
 jobs:
-  build-debug:
-    if: startsWith(github.ref, 'refs/heads/')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Build debug APK
-        run: ./gradlew assembleDebug
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v6
-        with:
-          name: ssh-remote-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/')
+  build-release:
+    name: Build & Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -69,13 +41,6 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: ./gradlew assembleRelease
-
-      - name: Rename release APK
-        run: |
-          cd app/build/outputs/apk/release
-          for file in *.apk; do
-            mv "$file" "${file/-unsigned/}"
-          done
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
